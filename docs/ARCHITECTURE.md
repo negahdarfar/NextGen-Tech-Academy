@@ -12,6 +12,7 @@
 - Script timing estimator checks approximate spoken duration before recording/TTS (default 145 words per minute; actual duration must be checked after rendering).
 - SRT structural validator checks cue numbering, timestamp format/ranges, empty cues, and overlapping timings.
 - Research-pack validator requires source URLs, publishers, publication/access dates, distinct domains, and traceable source IDs for each factual claim.
+- First local FFmpeg renderer creates MP4 from a background image, narration audio, and optional Persian SRT soft-subtitle track; FFprobe verifies the actual duration and rejects output under 60 seconds.
 - GitHub Actions runs unit tests and validates the example manifest and sample script.
 
 ## Not implemented yet
@@ -19,7 +20,7 @@
 - Automated topic research and source verification
 - Text-to-speech / voice generation
 - Persian translation quality checks and subtitle alignment against generated audio
-- Licensed media retrieval and FFmpeg rendering
+- Multi-scene editing, transitions, animated visuals, and licensed media retrieval (basic still-image + audio FFmpeg render is implemented)
 - Thumbnail generation
 - YouTube OAuth, upload, scheduling, and analytics ingestion
 
