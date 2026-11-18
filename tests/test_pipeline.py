@@ -13,7 +13,7 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             subtitles = root / "fa.srt"
-            subtitles.write_text("1\\n00:00:00,000 --> 00:00:02,000\\nسلام", encoding="utf-8")
+            subtitles.write_text("\n".join(["1", "00:00:00,000 --> 00:00:02,000", "سلام"]), encoding="utf-8")
             manifest = {"script":str(root/"script.txt"),"piper_model":str(root/"voice.onnx"),
                         "image":str(root/"bg.png"),"persian_srt":str(subtitles),
                         "output":"episode.mp4","build_dir":str(root/"build")}
