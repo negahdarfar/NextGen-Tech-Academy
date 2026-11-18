@@ -1,0 +1,6 @@
+{
+  "image": "assets/technology-background.png",
+  "narration_audio": "assets/narration-en.wav",
+  "persian_srt": "assets/subtitles-fa.srt",
+  "output": "build/nextgen-tech-episode.mp4"
+}
