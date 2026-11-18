@@ -6,6 +6,7 @@ from pathlib import Path
 from .tts import synthesize
 from .translate_srt import argos_translate, translate_srt_content
 from .render import render
+from .subtitles import validate_srt
 
 def run_pipeline(manifest: dict) -> dict:
     required = ("script", "piper_model", "image", "output")
@@ -24,6 +25,10 @@ def run_pipeline(manifest: dict) -> dict:
         translated = translate_srt_content(english_content, argos_translate)
         persian_srt = str(build_dir / "subtitles-fa.srt")
         Path(persian_srt).write_text(translated, encoding="utf-8")
+    if persian_srt:
+        subtitle_errors = validate_srt(Path(persian_srt).read_text(encoding="utf-8-sig"))
+        if subtitle_errors:
+            raise ValueError("Persian SRT validation failed: " + "; ".join(subtitle_errors))
     render_manifest = {
         "image": manifest["image"],
         "narration_audio": str(audio_path),
