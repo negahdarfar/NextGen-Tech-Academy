@@ -12,39 +12,31 @@ An AI-assisted production workspace for evidence-led technology education videos
 
 ## The 11 YouTube Agent skills
 
-The complete upstream MIT-licensed skill pack is connected as a Git submodule at `.claude/`. It provides:
-`yt-script`, `yt-package`, `yt-edit`, `yt-comment`, `yt-plan`, `yt-viral`, `yt-retention`, `yt-shorts`, `yt-seo`, `yt-chapters`, and `yt-audit`, plus six dependency-free Python utilities.
+The complete upstream MIT-licensed skill pack is connected as a Git submodule at `.claude/`. It provides: `yt-script`, `yt-package`, `yt-edit`, `yt-comment`, `yt-plan`, `yt-viral`, `yt-retention`, `yt-shorts`, `yt-seo`, `yt-chapters`, and `yt-audit`, plus six dependency-free Python utilities.
 
 `yt-shorts` is retained only for optional repurposing research. It must not create or publish primary channel uploads.
 
 ## Setup
-
-Clone with skills included:
 
 ```bash
 git clone --recurse-submodules https://github.com/negahdarfar/NextGen-Tech-Academy.git
 cd NextGen-Tech-Academy
 ```
 
-If already cloned without submodules:
+If already cloned without submodules: `git submodule update --init --recursive`.
 
-```bash
-git submodule update --init --recursive
-```
-
-Python 3.10+ is required. The initial policy toolkit uses only the standard library:
+Python 3.10+; no Python runtime dependencies are needed for the included validators:
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
 PYTHONPATH=src python -m nextgen_tech_academy.video_policy examples/video_metadata.json
+PYTHONPATH=src python -m nextgen_tech_academy.script_timing examples/sample_script.txt
 ```
+
+The SRT validator is available as `nextgen_tech_academy.subtitles.validate_srt` and checks cue structure, timestamps, sequence, and overlap. It does not judge translation quality or synchronization against audio.
 
 ## Pipeline roadmap
 
 Research and source verification → topic planning → script and hook scoring → title/thumbnail package → voiceover and asset plan → editing/rendering → English audio + Persian subtitles → chapters and SEO → quality gate → human approval → optional YouTube upload adapter.
 
-The upstream skills write and analyze; they do **not** render video or publish to YouTube. Rendering, subtitle generation, and YouTube API publishing will be separate adapters and will not be marked complete until implemented and tested. No paid API is required by this scaffold.
-
-## License and attribution
-
-Project-specific code is MIT licensed. The upstream skill pack remains under its original MIT license in the `.claude` submodule.
+The upstream skills write and analyze; they do **not** render video or publish to YouTube. Automated research, TTS, Persian subtitle translation/alignment, licensed media retrieval, FFmpeg rendering, thumbnail generation, YouTube OAuth/upload, scheduling, and analytics are separate adapters still to be implemented and tested. No paid API is required by this scaffold.
