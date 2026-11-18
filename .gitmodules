@@ -1,0 +1,4 @@
+[submodule ".claude"]
+	path = .claude
+	url = https://github.com/Jakeschincariol/youtube-agent-skill.git
+	branch = main

@@ -1,0 +1,9 @@
+{
+  "script": "scripts/episode-en.txt",
+  "piper_model": "models/en_US-lessac-medium.onnx",
+  "piper_executable": "piper",
+  "image": "assets/episode-background.png",
+  "english_srt": "captions/episode-en.srt",
+  "output": "build/episode.mp4",
+  "build_dir": "build"
+}
