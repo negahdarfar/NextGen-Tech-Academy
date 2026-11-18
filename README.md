@@ -33,7 +33,7 @@ PYTHONPATH=src python -m nextgen_tech_academy.video_policy examples/video_metada
 PYTHONPATH=src python -m nextgen_tech_academy.script_timing examples/sample_script.txt
 ```
 
-The SRT validator is available as `nextgen_tech_academy.subtitles.validate_srt` and checks cue structure, timestamps, sequence, and overlap. It does not judge translation quality or synchronization against audio.
+The SRT validator is available as `nextgen_tech_academy.subtitles.validate_srt` and checks cue structure, timestamps, sequence, and overlap. It does not judge translation quality or synchronization against audio. The research-pack validator (`nextgen_tech_academy.research.validate_research_pack`) requires traceable claims, dated sources, and at least two distinct domains; see `docs/RESEARCH_STANDARD.md`.
 
 ## Pipeline roadmap
 
