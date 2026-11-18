@@ -1,0 +1,8 @@
+{
+  "primary_upload_format": "long_form",
+  "minimum_duration_seconds": 60,
+  "shorts_primary_uploads_enabled": false,
+  "narration_language": "en",
+  "subtitle_language": "fa",
+  "require_human_approval_before_publish": true
+}
