@@ -13,6 +13,7 @@
 - SRT structural validator checks cue numbering, timestamp format/ranges, empty cues, and overlapping timings.
 - Research-pack validator requires source URLs, publishers, publication/access dates, distinct domains, and traceable source IDs for each factual claim.
 - Offline Piper TTS adapter generates English WAV narration from a local voice model and rejects audio under 60 seconds.
+- Optional Argos Translate adapter translates English SRT cue text into Persian offline while preserving timestamps; requires a separately installed `en -> fa` model and human language review.
 - First local FFmpeg renderer creates MP4 from a background image, narration audio, and optional Persian SRT soft-subtitle track; FFprobe verifies the actual duration and rejects output under 60 seconds.
 - GitHub Actions runs unit tests and validates the example manifest and sample script.
 
