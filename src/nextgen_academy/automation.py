@@ -96,8 +96,9 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
     return result
 
 
-def _require_free_credit_budget(account: dict, clips: int) -> None:
-    """Fail closed unless API reports free credits and the user configures per-clip cost."""
+def _require_free_credit_budget(account: dict, clips: int | None = None,
+                                models: list[str] | None = None) -> None:
+    """Fail closed unless API reports free credits and each selected model has a configured cost."""
     free_keys = {
         "free_credits", "free_balance", "bonus_credits",
         "trial_credits", "promotional_credits",
@@ -163,7 +164,7 @@ class _VidoGridRouter:
         self.models = [
             model.strip() for model in os.getenv(
                 "VIDOGRID_MODEL_ROTATION",
-                "grok-imagine-video-1.5-lite,grok-imagine-video-1.5",
+                "grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash",
             ).split(",") if model.strip()
         ]
         if not self.models:
