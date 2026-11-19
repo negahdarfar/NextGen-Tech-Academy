@@ -15,6 +15,7 @@ from .video_segments import VideoSegment, build_segments, segments_as_dicts
 from .vidogrid import VidoGridClient, VidoGridSettings
 from .tts import synthesize_storyboard
 from .youtube_package import build_youtube_package
+from .script_review import write_review_report
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -71,6 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
     package = sub.add_parser("youtube-package", help="create editable title, description, chapters and tags")
     package.add_argument("--storyboard", default="output/storyboard.json")
     package.add_argument("--output", default="output/youtube-package.json")
+
+    review = sub.add_parser("script-check", help="check script completeness, sources and claim references")
+    review.add_argument("--storyboard", default="output/storyboard.json")
+    review.add_argument("--output", default="output/script-review.json")
     return parser
 
 
@@ -162,6 +167,11 @@ def main() -> int:
         path = build_youtube_package(args.storyboard, args.output)
         print(f"Created editable YouTube publishing package: {path}")
         return 0
+
+    if args.command == "script-check":
+        report = write_review_report(args.storyboard, args.output)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["passed"] else 1
 
     return 2
 
