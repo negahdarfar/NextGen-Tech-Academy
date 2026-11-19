@@ -11,7 +11,9 @@ Cloud-first automated YouTube documentary production. The workflow runs on GitHu
 - YouTube upload is private by default. Public publishing is disabled.
 
 ## Cloud and local components
-- Gemini (optional Groq/OpenRouter fallback) drafts the bilingual documentary script from RSS research leads.
+- Gemini (optional Groq/OpenRouter fallback) drafts the bilingual documentary script from RSS research leads and fetched source-page extracts.
+- A source-audit step records HTTPS page reachability, page title/description, a bounded text extract and a content hash.
+- A claim evidence report records cited source IDs and lexical overlap. This is a triage aid only, **not fact verification**; a human must open sources and verify claims.
 - Pexels supplies landscape stock footage.
 - Edge TTS creates English narration.
 - FFmpeg assembles video, narration and Persian subtitles.
@@ -31,7 +33,7 @@ Optional repository variables:
 Open **Actions → Automated YouTube documentary factory → Run workflow**. Choose a duration from 3 to 10 minutes and the number of vertical highlights (3, 5 or 8). Leave topic blank for automatic topic discovery. The upload checkbox defaults to false; if enabled, the finished master video is uploaded privately. Scheduled runs are Tuesday and Friday at 06:17 UTC; they upload privately only when `YOUTUBE_TOKEN_JSON` is configured, otherwise they still generate the artifact.
 
 ## Outputs
-The workflow preserves `output/` as a GitHub Actions artifact for 14 days, including the master MP4, storyboard, Persian SRT, narration, footage-source manifest, YouTube metadata package, vertical MP4 clips and highlight report. If highlight extraction fails, the master documentary and its files are still preserved.
+The workflow preserves `output/` as a GitHub Actions artifact for 14 days, including the master MP4, storyboard, Persian SRT, narration, source audit, claim evidence audit, footage-source manifest, YouTube metadata package, vertical MP4 clips and highlight report. If highlight extraction fails, the master documentary and its files are still preserved.
 
 ## Important notes
-Pexels API quotas and license terms apply; this is not unlimited free compute. Gemini free-tier quotas and GitHub Actions usage limits also apply. The workflow records creator/source URLs in the output and description. RSS results are research leads, not verified evidence: fact-check claims, review the complete video and confirm media rights before public release. The first live run should be supervised. Public YouTube publishing remains disabled.
+Pexels API quotas and license terms apply; this is not unlimited free compute. Gemini free-tier quotas and GitHub Actions usage limits also apply. The workflow records creator/source URLs in the output and description. RSS feeds and fetched pages are research inputs, not guaranteed reliable evidence. A reachable page or keyword overlap does not prove a claim. Human fact-checking, complete-video review and media-rights review are mandatory before public release. The first live run should be supervised. Public YouTube publishing remains disabled.
