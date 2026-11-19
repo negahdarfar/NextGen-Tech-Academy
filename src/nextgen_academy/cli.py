@@ -160,9 +160,14 @@ def main() -> int:
         segments = [VideoSegment(**item) for item in payload["segments"]]
         client = VidoGridClient(VidoGridSettings.from_env())
         account = client.account()
-        print("VidoGrid account and credit balance:")
+        from .automation import _require_free_credit_budget
+        _require_free_credit_budget(
+            account,
+            models=[client.settings.model] * len(segments),
+        )
+        print("VidoGrid free-credit balance check passed:")
         print(json.dumps(account, ensure_ascii=False, indent=2))
-        if input("Submit these 4 clips now? [y/N] ").strip().lower() != "y":
+        if input("Submit these 4 clips using the verified free-credit budget? [y/N] ").strip().lower() != "y":
             print("Cancelled; no generation jobs were sent.")
             return 0
         manifest = submit_segments(segments, client, args.jobs_output)
