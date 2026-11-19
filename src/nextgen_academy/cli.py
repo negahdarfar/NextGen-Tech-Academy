@@ -30,6 +30,18 @@ def build_parser() -> argparse.ArgumentParser:
     documentary.add_argument("--clip-seconds", type=int, choices=(4, 6, 8, 10, 12), default=12)
     documentary.add_argument("--output", default="output/documentary-plan.json")
 
+    run_init = sub.add_parser("documentary-init", help="initialize a resumable documentary run from a blueprint")
+    run_init.add_argument("--plan", default="output/documentary-plan.json")
+    run_init.add_argument("--state", default="output/documentary-run.json")
+
+    run_progress = sub.add_parser("documentary-progress", help="record progress for one documentary chapter")
+    run_progress.add_argument("--state", default="output/documentary-run.json")
+    run_progress.add_argument("--chapter", type=int, required=True)
+    run_progress.add_argument("--status", choices=("planned", "researched", "scripted", "narrated", "assembled", "reviewed"))
+    run_progress.add_argument("--output-name")
+    run_progress.add_argument("--output-path")
+    run_progress.add_argument("--error")
+
     plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
@@ -97,6 +109,26 @@ def main() -> int:
         path = save_documentary_plan(plan, args.output)
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         print(f"Saved documentary production blueprint: {path}")
+        return 0
+
+    if args.command == "documentary-init":
+        from .documentary_state import initialize_documentary_run
+        path = initialize_documentary_run(args.plan, args.state)
+        print(f"Initialized resumable documentary run: {path}")
+        return 0
+
+    if args.command == "documentary-progress":
+        from .documentary_state import update_chapter_state
+        outputs = None
+        if args.output_name or args.output_path:
+            if not args.output_name or not args.output_path:
+                raise SystemExit("--output-name and --output-path must be supplied together.")
+            outputs = {args.output_name: args.output_path}
+        state = update_chapter_state(args.state, args.chapter, args.status,
+                                     outputs=outputs, error=args.error)
+        chapter = next(item for item in state["chapters"] if item["chapter"] == args.chapter)
+        print(json.dumps(chapter, ensure_ascii=False, indent=2))
+        print(f"Run status: {state['status']}")
         return 0
 
     if args.command == "plan":
