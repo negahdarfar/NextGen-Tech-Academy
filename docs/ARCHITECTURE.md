@@ -1,42 +1,9 @@
 # Architecture
 
-## Design principle
+The cloud pipeline is composed of replaceable stages: topic discovery, source collection, Gemini/Groq/OpenRouter script drafting, English narration, Persian subtitle generation, licensed stock-footage retrieval, FFmpeg rendering, quality checks and YouTube upload.
 
-Each production stage is an independent component with explicit inputs and outputs. Provider integrations must be replaceable, testable, and disabled unless configured.
+## Media provider
+Pexels supplies landscape stock footage through its API. Each selected asset is recorded with its Pexels video ID, creator and source URL. Four 15-second sections are normalized and assembled into a 60-second 16:9 video. This is stock footage and motion editing, not text-to-video generation.
 
-## Proposed pipeline
-
-1. **Topic discovery** — identify candidate subjects and record why they are timely.
-2. **Research** — gather primary sources, publication dates, quotes, and source URLs.
-3. **Fact review** — flag unsupported claims, conflicts, and uncertainty.
-4. **Script** — create an English narration script with a target duration and audience.
-5. **Localization** — produce Persian subtitles and validate timing/encoding.
-6. **Visual planning** — map narration sections to a storyboard and ordered shots.
-7. **Prompt continuity** — apply a shared visual bible and carry scene, subject, lighting, and camera continuity between clips.
-8. **VidoGrid generation** — submit clip jobs sequentially, persist every accepted job UUID, and recover from interruptions.
-9. **Asset retrieval and rendering** — retrieve completed clips, validate actual duration, and assemble in storyboard order with FFmpeg.
-10. **Quality assurance** — inspect duration, audio levels, subtitle sync, factual claims, and rights.
-11. **YouTube packaging** — prepare metadata, chapters, thumbnail, and visibility settings.
-12. **Publishing** — future module; requires OAuth, explicit channel authorization, quota/error handling, and approval.
-
-## Provider boundaries
-
-- Research provider: returns sourced records, not unsupported prose.
-- Language model provider: accepts structured prompts and returns typed content.
-- Speech provider: returns audio plus metadata such as duration and voice settings.
-- Media provider: returns assets with license/provenance metadata.
-- VidoGrid adapter: checks account credits, submits a prompt, and polls a job UUID.
-- Renderer: consumes a local timeline and produces a video file.
-- YouTube publisher: must be isolated and disabled by default.
-
-## Local-first strategy
-
-Use local tools when they meet quality and performance needs. Ollama is an optional local language-model endpoint. VidoGrid is an optional remote generation provider; its API may consume credits and is never called by the planning command.
-
-## Reliability
-
-- Persist intermediate artifacts so a failed stage can resume.
-- Make stages idempotent where possible.
-- Record provider, model, prompt version, source URLs, and asset licenses.
-- Do not assume mobile-app free quotas apply to API usage.
-- Never publish automatically until a separate approval gate is implemented.
+## Runtime
+GitHub Actions executes the cloud workflow; Ollama remains optional for local experiments. Pexels API access and YouTube OAuth credentials are stored as GitHub Actions secrets. The uploader defaults to private visibility.
