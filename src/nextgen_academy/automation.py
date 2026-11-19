@@ -20,6 +20,8 @@ from .youtube_upload import upload_video
 
 def run_automated(topic: str = "", output_dir: str | Path = "output",
                   publish: bool = False) -> dict:
+    if publish and not os.getenv("YOUTUBE_TOKEN_JSON", "").strip():
+        raise RuntimeError("YOUTUBE_TOKEN_JSON is required before generation when --upload is selected.")
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     if not topic.strip():
