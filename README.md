@@ -1,116 +1,60 @@
 # NextGen-Tech-Academy
 
-An AI-assisted production workflow for English-language technology explainers and documentaries with Persian subtitles.
+Cloud-first AI video production and YouTube upload automation. The cloud pipeline does **not** require Ollama or an always-on laptop.
 
-## Current preset
+## Target format
 
-**60 seconds, standard 16:9 YouTube video, four linked 15-second clips.** The workflow drafts a bilingual script locally with Ollama, checks source references, prepares VidoGrid prompts, optionally creates local narration with Piper, downloads completed clips and assembles an MP4 with FFmpeg.
+- Standard YouTube 16:9 video, currently 60 seconds (four connected 15-second clips).
+- English narration and Persian subtitles.
+- Research leads, bilingual script, video generation, TTS, FFmpeg assembly, metadata and YouTube upload.
+- Cloud execution through GitHub Actions; manual dispatch or scheduled runs.
 
-This is an evolving codebase. A successful unit-test run does not prove compatibility with a live VidoGrid account, a particular Piper voice model, or every local FFmpeg build.
+## Cloud providers
 
-## Setup
+The script writer uses a configurable fallback chain: Gemini, Groq and OpenRouter. Configure one or more API keys as GitHub Actions Secrets. Free-tier availability and model names can change; the app tries configured providers in order and reports a failure if all are unavailable.
 
-Requires Python 3.10+ and FFmpeg/ffprobe on PATH.
+VidoGrid video models can be rotated using `VIDOGRID_MODEL_ROTATION`. The current default rotates Grok Imagine Video 1.5 Lite and Grok Imagine Video 1.5. VidoGrid API requests consume VidoGrid credits. The automation deliberately fails closed unless the account response exposes a separate free/trial credit balance and `VIDOGRID_CREDITS_PER_CLIP` is configured. The application will not guess that app-level free generations are available to the API.
 
-```bash
-python -m pip install -e ".[dev]"
-```
+Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an external service and may be rate-limited or change; review its terms and voice usage rights before commercial use.
 
-Optional local voice synthesis:
+## GitHub Actions setup
 
-```bash
-python -m pip install -e ".[voice]"
-```
+1. Add repository **Actions secrets**:
+   - `VIDOGRID_API_KEY`
+   - At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`
+   - `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with the `youtube.upload` scope)
+2. Add repository **Actions variables** if needed:
+   - `LLM_PROVIDER_ORDER` (default `gemini,groq,openrouter`)
+   - `VIDOGRID_MODEL_ROTATION` (default `grok-imagine-video-1.5-lite,grok-imagine-video-1.5`)
+3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_CREDITS_PER_CLIP` only after checking current pricing for the selected models.
+4. Open **Actions → Automated YouTube video factory → Run workflow**. Supply a topic or leave it blank for RSS-based topic discovery.
+5. The workflow uploads privately by default and stores output artifacts for 14 days.
 
-Install Ollama separately and pull the small local model:
+The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute the process even when the user's laptop is off. GitHub Actions minutes and artifact quotas still apply.
 
-```bash
-ollama pull qwen2.5:3b
-```
+## Local test run (no Ollama)
 
-Copy `.env.example` to `.env` and add your VidoGrid API key locally. Never commit the key.
-
-## One-minute workflow
-
-1. Draft the English narration and Persian subtitles locally:
-
-```bash
-nextgen-academy draft-script --topic "How humanoid robots are changing manufacturing"
-```
-
-This uses the local Ollama service at `http://127.0.0.1:11434` and model `qwen2.5:3b` by default. It does not browse the web or verify factual claims. If Ollama is unavailable, create an empty template with:
+Requires Python 3.10+ and FFmpeg:
 
 ```bash
-nextgen-academy storyboard --topic "How humanoid robots are changing manufacturing"
+python -m pip install -e ".[dev,cloud]"
+nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing"
 ```
 
-2. Manually add at least two verified HTTPS sources to `output/storyboard.json`, each with `id`, `url`, `publisher`, and `checked: true`. Add a `claims` list; each factual claim must contain `text` and `source_ids` referencing supporting source IDs. Open and verify the sources yourself.
+Add credentials to the process environment or a local, ignored `.env` file. Never commit keys or OAuth tokens.
 
-3. Run the editorial structure and source-reference gate:
+## YouTube publishing safeguards
 
-```bash
-nextgen-academy script-check
-```
+- OAuth refresh-token credentials are required; an API key alone cannot upload to a personal channel.
+- Default visibility is **private**. Public publishing is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is explicitly set.
+- Upload uses resumable transfer.
+- Automated research collects RSS titles, summaries and links. It does not independently prove claims or guarantee source reliability.
+- Human review of facts, source quality, translation, audio, rights, watermarks and the final render is required before public release.
 
-This catches missing fields and broken source references. It cannot establish whether a source truly supports a claim.
+## Important limitations
 
-4. Create four linked 15-second video prompts from the storyboard:
-
-```bash
-nextgen-academy video-plan --topic "How humanoid robots are changing manufacturing"
-```
-
-This reads the scene descriptions, English narration and Persian subtitles from the storyboard. You can override the scene descriptions with four repeated `--scene "..." ` arguments.
-
-5. Generate the Persian SRT subtitle track:
-
-```bash
-nextgen-academy subtitles
-```
-
-6. Optionally create English narration locally with Piper. Download a voice model and its matching `.onnx.json` configuration, and review its commercial-use license:
-
-```bash
-nextgen-academy voiceover --model models/piper/your-english-voice.onnx
-```
-
-7. Review the VidoGrid account balance and explicitly approve generation. This can consume credits:
-
-```bash
-nextgen-academy video-submit --confirm-paid-api
-```
-
-The command asks for a second interactive confirmation. No VidoGrid generation request is sent before that confirmation.
-
-8. Poll the jobs and download completed clips:
-
-```bash
-nextgen-academy video-download
-```
-
-9. Create an editable YouTube metadata draft (title options, description template, chapters, tags and thumbnail prompt):
-
-```bash
-nextgen-academy youtube-package
-```
-
-10. Assemble the final MP4:
-
-```bash
-nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
-```
-
-Omit `--narration-audio` if no narration track is available.
-
-## Still to build
-
-- Automated web research, primary-source discovery and evidence extraction.
-- Automated fact verification beyond structural source-reference checks.
-- Higher-quality script editing and human approval UI.
-- Music, sound design, thumbnail image generation and visual QA.
-- YouTube OAuth, channel authorization, upload, scheduling and analytics feedback.
-- Automated competitor research and search-volume-based SEO.
-
-YouTube publishing is intentionally not enabled. Human review of factual claims, translations, licensing, provider watermarks and the final exported video remains mandatory.
-
-See [production pipeline](docs/PRODUCTION_PIPELINE.md) and [VidoGrid integration notes](docs/VIDEOGRID_INTEGRATION.md).
+- The first cloud end-to-end run has not yet been validated against the user's live VidoGrid account, cloud LLM keys, TTS endpoint or YouTube OAuth credentials.
+- Free API tiers and model access vary by provider and can change without notice.
+- The credit guard blocks generation unless a separate free/trial balance is visible and a per-clip estimate is configured. If VidoGrid only reports a combined balance, the safe behavior is to stop.
+- No public upload is enabled by default.
+- VidoGrid may return model-specific durations or output schemas; inspect the first live run before enabling recurring automation.
