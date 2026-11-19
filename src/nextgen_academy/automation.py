@@ -117,10 +117,30 @@ def _require_free_credit_budget(account: dict, clips: int | None = None,
 
     walk(account)
     if not balances:
-        raise RuntimeError(
-            "VidoGrid did not expose a separate free/trial credit balance. "
-            "No video jobs were submitted to avoid paid usage."
-        )
+        # VidoGrid's public API documentation describes an account credit balance,
+        # but does not promise a separate free/trial field. Only trust total balance
+        # when the account owner explicitly confirms it contains free credits only.
+        if os.getenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", "").lower() != "true":
+            raise RuntimeError(
+                "VidoGrid did not expose a separate free/trial credit balance. "
+                "If you have verified that the entire account balance is free credits, "
+                "set VIDOGRID_TOTAL_BALANCE_IS_FREE=true. No jobs were submitted."
+            )
+        total_keys = {"balance", "credits", "credit_balance", "remaining_credits"}
+        def collect_total(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key.lower() in total_keys and isinstance(item, (int, float)):
+                        balances.append(float(item))
+                    collect_total(item)
+            elif isinstance(value, list):
+                for item in value:
+                    collect_total(item)
+        collect_total(account)
+        if not balances:
+            raise RuntimeError(
+                "No numeric VidoGrid account balance was found; no jobs were submitted."
+            )
     configured_costs = os.getenv("VIDOGRID_MODEL_CREDIT_COSTS", "").strip()
     costs: dict[str, float] = {}
     if configured_costs:
