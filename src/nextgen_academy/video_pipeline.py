@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 import time
@@ -26,7 +25,10 @@ def _walk_urls(value: Any):
             yield from _walk_urls(item)
     elif isinstance(value, list):
         for item in value:
-            yield from _walk_urls(item)
+            if isinstance(item, str) and item.startswith("https://"):
+                yield item
+            else:
+                yield from _walk_urls(item)
 
 
 def extract_video_url(payload: dict[str, Any]) -> str:
@@ -173,24 +175,28 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
           "-c", "copy", str(silent_output)])
 
     inputs = ["-i", str(silent_output)]
+    audio_index = None
+    subtitle_index = None
     if narration_audio:
         audio = Path(narration_audio)
         if not audio.is_file():
             raise PipelineError(f"Narration audio not found: {audio}")
+        audio_index = 1
         inputs += ["-i", str(audio)]
-    command = [ffmpeg, "-y", *inputs]
-    if narration_audio:
-        command += ["-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
-                    "-c:a", "aac", "-shortest"]
-    else:
-        command += ["-c", "copy"]
     if subtitles:
         subtitle_file = Path(subtitles)
         if not subtitle_file.is_file():
             raise PipelineError(f"Subtitle file not found: {subtitle_file}")
-        # Subtitle burn-in is optional; preserve portability by muxing SRT as a track.
-        command += ["-i", str(subtitle_file), "-c:s", "mov_text"]
-    command += ["-movflags", "+faststart", str(output)]
+        subtitle_index = 1 + int(bool(narration_audio))
+        inputs += ["-i", str(subtitle_file)]
+    command = [ffmpeg, "-y", *inputs, "-map", "0:v:0"]
+    if audio_index is not None:
+        command += ["-map", f"{audio_index}:a:0", "-c:a", "aac", "-shortest"]
+    else:
+        command += ["-map", "0:a?", "-c:a", "copy"]
+    if subtitle_index is not None:
+        command += ["-map", f"{subtitle_index}:s:0", "-c:s", "mov_text"]
+    command += ["-c:v", "copy", "-movflags", "+faststart", str(output)]
     _run(command)
     return output
 
