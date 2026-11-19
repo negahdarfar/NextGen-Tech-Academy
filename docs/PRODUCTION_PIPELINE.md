@@ -43,9 +43,9 @@ OmniRoute may be used as an ephemeral gateway for LLM requests. It is not a sour
 - Review source contents, factual claims, translations, audio, model terms, stock licenses and final video before public release.
 - GitHub Actions minutes, storage and artifact quotas apply.
 
-## Long-form documentary assembly (new utility; not yet an automated factory)
+## Legacy standalone long-form assembly utility
 
-The main cloud workflow above still targets a one-minute 16:9 episode. It has not yet been converted into a fully automated 15–60+ minute documentary pipeline. To safely join already-produced clips into a longer sequence, the repository now includes `scripts/assemble_documentary.py`:
+The main `auto-publish.yml` workflow remains the separate one-minute pipeline. The standalone utility below is retained for custom local manifests; the connected 15–60-minute factory is documented in the later “Fully connected long-form stages” section and uses `documentary-produce`:
 
 ```bash
 python scripts/assemble_documentary.py --clips output/documentary-clips.json --output output/documentary.mp4 --subtitles output/subtitles.fa.srt --voiceover output/narration.mp3
@@ -71,7 +71,7 @@ nextgen-academy documentary-progress --chapter 1 --status scripted --output-name
 nextgen-academy documentary-progress --chapter 2 --error "Temporary provider failure"
 ```
 
-Stages are `planned → researched → scripted → narrated → assembled → reviewed`. Skipping or moving backwards is blocked by default. Re-initialization refuses to overwrite an existing run manifest. Writes use an atomic replace so an interrupted save does not leave a partially-written JSON file. When every chapter is reviewed, the run is marked `ready_for_human_approval`; this is not permission to publish publicly. These commands track state only and do not yet run the chapter research, writing, narration, or media-generation stages automatically.
+Stages are `planned → researched → scripted → narrated → assembled → reviewed`. Skipping or moving backwards is blocked by default. Re-initialization refuses to overwrite an existing run manifest. Writes use an atomic replace so an interrupted save does not leave a partially-written JSON file. When every chapter is reviewed, the run is marked `ready_for_human_approval`; this is not permission to publish publicly. These low-level commands remain available for manual recovery and inspection. The `documentary-produce` orchestrator below now runs the research, writing, narration, visual-generation and assembly stages in order, resuming from saved checkpoints.
 
 ### Chapter-by-chapter research and bilingual script drafting
 
@@ -83,7 +83,7 @@ nextgen-academy documentary-chapter --state output/documentary-run.json --chapte
 
 This command discovers RSS source leads for the documentary topic and chapter, saves the source list, drafts English narration plus a faithful Persian translation, validates the requested narration length and source IDs attached to claims, then records the script path in the run manifest. If drafting fails after research, the chapter remains at the researched stage and can be retried without repeating research. A chapter with a saved script is skipped on subsequent runs unless `--force` is deliberately supplied.
 
-This is the first connected chapter-production stage; narration audio, timed subtitles, video generation, assembly and automated long-form upload remain separate stages and are not implied to be complete. RSS items are leads, not fact-checked sources. Human source verification and editorial review remain mandatory.
+The chapter script includes the narration, translation, claim ledger and visual-shot prompts. The `documentary-voice`, `documentary-visuals` and `documentary-assemble` commands connect the remaining production stages. RSS items are discovery leads, not fact-checked sources; human source verification and editorial review remain mandatory. The automated long-form runner also creates `youtube-package.json` with measured chapter timecodes, source links, stock-footage credits, tags and a thumbnail brief. It does not upload the video.
 
 ### Optional FreeLLMAPI cloud route
 
@@ -130,7 +130,7 @@ After every chapter has narration and every visual shot has a valid local clip, 
 nextgen-academy documentary-assemble --state output/documentary-run.json --output output/documentary/final-documentary.mp4
 ```
 
-The assembler synchronizes the visual timeline to measured chapter narration durations, concatenates English audio, offsets Persian subtitle cues, exports 1920×1080/30fps and checks the rendered duration against the blueprint tolerance. This is a technical assembly gate, not factual, translation, copyright, or editorial approval. A human must watch the complete video and review the source/rights ledger before marking chapters reviewed or uploading. The long-form CLI is manually invoked; the one-minute scheduled workflow is not silently repurposed for 15–60-minute jobs.
+The assembler synchronizes the visual timeline to measured chapter narration durations, concatenates English audio, offsets Persian subtitle cues, exports 1920×1080/30fps, checks the rendered duration and stream metadata against technical gates, and only then atomically promotes the final MP4. The runner also creates an editable `youtube-package.json` with measured chapter timecodes and recorded source/stock-footage credits. This is a technical assembly gate, not factual, translation, copyright, or editorial approval. A human must watch the complete video and review the source/rights ledger before marking chapters reviewed or uploading. The long-form CLI is manually invoked; the one-minute scheduled workflow is not silently repurposed for 15–60-minute jobs.
 
 
 ### One-command resumable factory and GitHub Actions
