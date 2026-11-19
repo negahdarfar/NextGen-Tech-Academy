@@ -201,6 +201,31 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
     return output
 
 
+def validate_render_duration(video_path: str | Path, minimum_seconds: float = 55.0,
+                             maximum_seconds: float = 70.0) -> float:
+    """Fail if generated clips did not assemble to a near-one-minute episode."""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        raise PipelineError("ffprobe was not found; cannot validate final video duration.")
+    result = subprocess.run(
+        [ffprobe, "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
+        capture_output=True, text=True,
+    )
+    if result.returncode:
+        raise PipelineError(f"Could not inspect final video: {result.stderr[-1200:]}")
+    try:
+        duration = float(result.stdout.strip())
+    except ValueError as exc:
+        raise PipelineError("ffprobe returned an invalid duration.") from exc
+    if not minimum_seconds <= duration <= maximum_seconds:
+        raise PipelineError(
+            f"Final render is {duration:.2f}s; expected {minimum_seconds:.0f}-{maximum_seconds:.0f}s. "
+            "The video will not be uploaded."
+        )
+    return duration
+
+
 def write_srt(segments: list[dict[str, Any]], target: str | Path) -> Path:
     """Write simple timed Persian/English subtitle cues from storyboard narration."""
     cursor = 0.0
