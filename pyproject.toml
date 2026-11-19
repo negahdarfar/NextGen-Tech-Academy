@@ -12,6 +12,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+voice = ["piper-tts>=1.2"]
 
 [project.scripts]
 nextgen-academy = "nextgen_academy.cli:main"
