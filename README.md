@@ -1,55 +1,70 @@
 # NextGen-Tech-Academy
 
-An open-source foundation for an AI-assisted YouTube education production workflow focused on emerging technology, AI, robotics, space, biotechnology, and future innovations.
+An AI-assisted production workflow for English-language technology documentaries with Persian subtitles.
 
-## Current status
+## Current preset
 
-The project now includes a first VidoGrid integration layer for planning ordered 15-second clip prompts and submitting jobs sequentially through the official API. The default model route is Grok Imagine Video 1.5 Lite. This is not yet a complete unattended video factory: automatic result downloads, visual reference-frame chaining, FFmpeg assembly, final QA, and YouTube publishing remain future work.
+**One minute, standard 16:9 YouTube video, four linked 15-second clips.** The project prepares prompts, submits them to VidoGrid only after explicit confirmation, polls and downloads results, and assembles a final MP4 with FFmpeg. This is a working code path, not yet verified against a live VidoGrid account.
 
-## Goals
+## Setup
 
-- Research and validate timely technology topics.
-- Draft English narration and create Persian subtitle files.
-- Plan standard long-form YouTube videos (not Shorts by default).
-- Generate short visual clips from a continuous storyboard and assemble them into long-form videos.
-- Prefer free/open-source and local tools where practical, with optional paid providers.
-- Require explicit configuration and approval before external publishing.
-
-## Quick start
-
-Requires Python 3.10+.
+Requires Python 3.10+ and FFmpeg on PATH.
 
 ```bash
 python -m pip install -e ".[dev]"
-nextgen-academy plan --topic "How humanoid robots are changing manufacturing"
 ```
 
-## VidoGrid clip workflow
+Copy `.env.example` to `.env` and add your VidoGrid API key locally. Never commit the key.
 
-Create an ordered prompt manifest without making network requests:
+## One-minute workflow
+
+1. Create a four-scene storyboard:
 
 ```bash
-nextgen-academy video-plan \
-  --topic "How humanoid robots are changing manufacturing" \
-  --scene "Wide establishing shot of a modern robotics factory at dawn" \
-  --scene "A humanoid robot carefully moves a component along the production line" \
-  --scene "Close-up of robotic hands inspecting the component"
+nextgen-academy storyboard --topic "How humanoid robots are changing manufacturing"
 ```
 
-Review `output/video-plan.json`, then configure `VIDOGRID_API_KEY` in a local `.env` file. API submission is an explicit, credit-consuming action and requires both an acknowledgement flag and an interactive confirmation:
+2. Create four linked visual prompts (no API charge):
+
+```bash
+nextgen-academy video-plan --topic "How humanoid robots are changing manufacturing"
+```
+
+You can replace the default scene descriptions with four `--scene "..." ` arguments.
+
+3. Add reviewed English narration and Persian translations to the scene entries in `output/video-plan.json`. The code does not invent or fact-check documentary claims.
+
+4. Submit only after checking the VidoGrid balance:
 
 ```bash
 nextgen-academy video-submit --confirm-paid-api
 ```
 
-See [docs/VIDOGRID_INTEGRATION.md](docs/VIDOGRID_INTEGRATION.md) for details.
+This asks for a second interactive confirmation. Generation may consume credits.
 
-**Important:** VidoGrid's mobile app may advertise free daily generations, but that must not be assumed to apply to API calls. The API documentation describes API-key authentication and VidoGrid credits. Check the account balance and current API pricing before submitting jobs.
+5. Wait for jobs and download the MP4 clips:
 
-## Safety and reliability
+```bash
+nextgen-academy video-download
+```
 
-- No secrets are stored in source control.
-- External research must be sourced and fact-checked.
-- Generated claims should be reviewed before publication.
-- API generation is never started by the planning command.
-- Publishing must remain disabled until OAuth, channel ownership, quota handling, and user approval are implemented and tested.
+6. Create a Persian subtitle track and assemble the video:
+
+```bash
+nextgen-academy subtitles
+nextgen-academy video-render --subtitles output/persian.srt
+```
+
+If narration audio is ready, add `--narration-audio path/to/narration.mp3` to the render command.
+
+## What is not automated yet
+
+- Research source collection and fact-check approval.
+- High-quality English script writing and Persian translation.
+- Text-to-speech generation, background music and sound design.
+- Thumbnail generation, chapter/SEO package, analytics feedback loop.
+- YouTube OAuth and publishing (intentionally disabled until secure channel authorization and approval controls are built).
+
+The storyboard defaults are structural scene suggestions, not factual scripts. A human must verify claims, subtitles, licensing and final video before publishing.
+
+See [the full production guide](docs/PRODUCTION_PIPELINE.md) and [VidoGrid notes](docs/VIDOGRID_INTEGRATION.md).
