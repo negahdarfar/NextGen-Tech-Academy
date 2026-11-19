@@ -51,8 +51,8 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
 
     client = VidoGridClient(VidoGridSettings.from_env())
     account = client.account()
-    _require_free_credit_budget(account, clips=len(segments))
     router = _VidoGridRouter()
+    _require_free_credit_budget(account, models=router.planned_models(len(segments)))
     jobs_path = root / "vidogrid-jobs.json"
     submit_segments(segments, router, jobs_path)
     poll_and_download(
@@ -120,15 +120,35 @@ def _require_free_credit_budget(account: dict, clips: int) -> None:
             "VidoGrid did not expose a separate free/trial credit balance. "
             "No video jobs were submitted to avoid paid usage."
         )
-    try:
-        per_clip = float(os.environ["VIDOGRID_CREDITS_PER_CLIP"])
-    except (KeyError, ValueError) as exc:
-        raise RuntimeError(
-            "Set VIDOGRID_CREDITS_PER_CLIP from current VidoGrid pricing for the selected models."
-        ) from exc
-    if per_clip <= 0:
-        raise RuntimeError("VIDOGRID_CREDITS_PER_CLIP must be greater than zero.")
-    required = per_clip * clips
+    configured_costs = os.getenv("VIDOGRID_MODEL_CREDIT_COSTS", "").strip()
+    costs: dict[str, float] = {}
+    if configured_costs:
+        try:
+            raw_costs = json.loads(configured_costs)
+            costs = {str(name): float(value) for name, value in raw_costs.items()}
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            raise RuntimeError("VIDOGRID_MODEL_CREDIT_COSTS must be a JSON object of model-to-credit costs.") from exc
+    if models is not None:
+        missing = sorted(set(models) - set(costs))
+        if missing:
+            raise RuntimeError(
+                "Configure VIDOGRID_MODEL_CREDIT_COSTS for every selected model: "
+                + ", ".join(missing)
+            )
+        if any(value <= 0 for value in costs.values()):
+            raise RuntimeError("Every configured VidoGrid model credit cost must be greater than zero.")
+        required = sum(costs[name] for name in models)
+    else:
+        # Backward-compatible single-model mode for the existing tests/CLI.
+        try:
+            per_clip = float(os.environ["VIDOGRID_CREDITS_PER_CLIP"])
+        except (KeyError, ValueError) as exc:
+            raise RuntimeError(
+                "Set VIDOGRID_CREDITS_PER_CLIP or VIDOGRID_MODEL_CREDIT_COSTS from current VidoGrid pricing."
+            ) from exc
+        if per_clip <= 0:
+            raise RuntimeError("VIDOGRID_CREDITS_PER_CLIP must be greater than zero.")
+        required = per_clip * int(clips or 0)
     available = min(balances)
     if available < required:
         raise RuntimeError(
@@ -148,21 +168,27 @@ class _VidoGridRouter:
         ]
         if not self.models:
             raise RuntimeError("VIDOGRID_MODEL_ROTATION must contain at least one model.")
-        unsupported = set(self.models) - {
-            "grok-imagine-video-1.5-lite", "grok-imagine-video-1.5",
+        self.endpoints = {
+            "grok-imagine-video-1.5-lite": "/video-gen/grok-imagine-video-1.5-lite",
+            "grok-imagine-video-1.5": "/video-gen/grok-imagine-video-1.5",
+            "veo-3.1": "/video-gen/veo",
+            "veo-3.1-fast": "/video-gen/veo",
+            "omni-1.1-flash": "/video-gen/veo",
+            "omni-1.2-flash": "/video-gen/veo",
         }
+        unsupported = set(self.models) - set(self.endpoints)
         if unsupported:
             raise RuntimeError(f"Unsupported VidoGrid video model(s): {sorted(unsupported)}")
         self.index = 0
         self.clients = {}
         base = VidoGridSettings.from_env()
         for model in self.models:
-            endpoint = (
-                "/video-gen/grok-imagine-video-1.5-lite"
-                if model == "grok-imagine-video-1.5-lite"
-                else "/video-gen/grok-imagine-video-1.5"
+            self.clients[model] = VidoGridClient(
+                replace(base, endpoint=self.endpoints[model], model=model)
             )
-            self.clients[model] = VidoGridClient(replace(base, endpoint=endpoint, model=model))
+
+    def planned_models(self, count: int) -> list[str]:
+        return [self.models[index % len(self.models)] for index in range(count)]
 
     def submit_video(self, prompt: str) -> dict:
         model = self.models[self.index % len(self.models)]
