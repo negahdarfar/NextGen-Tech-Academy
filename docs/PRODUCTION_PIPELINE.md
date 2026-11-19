@@ -1,40 +1,25 @@
 # Cloud-first production pipeline
 
-The target is a standard 60-second, 16:9 YouTube video. Narration is English and subtitles are Persian. The cloud path does not require Ollama or an always-on laptop.
+This repository has two distinct production paths:
 
-## Visual providers
+- **Legacy one-minute workflow:** `.github/workflows/auto-publish.yml` and `auto-run`; a standard 60-second 16:9 episode. Its existing schedule and provider behavior remain separate.
+- **Long-form documentary factory:** `.github/workflows/longform-documentary.yml`; manually dispatched 15-, 30- or 60-minute documentaries with eight chapters, English narration, Persian subtitles, resumable production stages and no automatic YouTube upload.
 
-1. Agnes AI Video 2.5 Flash is the preferred generated-video provider. Its published model reference currently shows a limited-time $0/second promotion, 720P output, 4–12 second clips, and a restricted free/default request rate. Treat it as a testable promotion, not a guaranteed permanent free tier.
-2. Pexels is the free stock-video fallback. It retrieves existing clips and is not an AI video generator.
-3. Each scene tries Agnes first when `AGNES_API_KEY` is configured. On a provider error, the scene falls back to Pexels if `PEXELS_API_KEY` is configured. Provider provenance is stored in `output/video-jobs.json`.
-4. Agnes clips are looped by FFmpeg to fill the 15-second scene timeline; four scenes form the one-minute episode.
+The long-form factory is the canonical path for extended documentaries. It requires a manually confirmed generation run and a zero-budget provider configuration. Its `auto` visual mode is Pexels-only; it does not silently call Agnes or fall back to a potentially chargeable service. Agnes can be selected only with a separate potential-cost acknowledgement.
 
-## Automated run
+## Long-form zero-budget provider requirements
 
-The GitHub Actions workflow `.github/workflows/auto-publish.yml` can be started manually or on its Tuesday/Friday schedule.
+- LLM: FreeLLMAPI cloud base URL and API key, or OpenRouter API key plus an explicitly free model ID ending in `:free`. Unknown pricing and paid fallback are rejected.
+- Visuals: `PEXELS_API_KEY` for `auto` or `pexels` mode. Pexels provides existing stock footage, not AI-generated clips.
+- Narration: Edge TTS via the cloud optional dependency. Commercial-use and voice terms must be reviewed.
+- Rendering: FFmpeg on GitHub-hosted runners.
+- Agnes: optional and potentially chargeable; requires `AGNES_API_KEY`, explicit provider selection and `--allow-agnes-potential-cost` after checking current pricing.
 
-    nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing"
-    nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing" --upload
+Never commit credentials. Add them directly in repository Settings → Secrets and variables → Actions. The production workflow is manual-only, saves resumable artifacts, and never uploads. A 60-minute run may exceed free quotas or runner time; validate with a 15-minute run first.
 
-When no topic is supplied, RSS headlines are used to choose a topic. The automated run:
-1. Discovers candidate articles and papers from RSS feeds.
-2. Uses the configured cloud LLM fallback order to draft four English narration scenes and Persian translations.
-3. Creates four linked storyboard scenes.
-4. Generates English narration using the configured cloud TTS adapter and Persian SRT subtitles.
-5. Generates a 12-second 720p video per scene with Agnes when available; otherwise retrieves Pexels stock footage.
-6. Assembles the scenes with FFmpeg, narration and subtitles, then checks that the output is approximately one minute.
-7. Creates YouTube metadata and, only when `--upload` is supplied, uploads through OAuth as private by default.
+## Legacy one-minute workflow
 
-## Configure GitHub Actions Secrets
-
-- `AGNES_API_KEY` — optional AI video key. Free 720p promotion is limited-time and may change.
-- `PEXELS_API_KEY` — optional free stock fallback. Recommended alongside Agnes.
-- At least one LLM route: the optional `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` pair, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY` for cloud writing.
-- `YOUTUBE_TOKEN_JSON` for OAuth upload with the `youtube.upload` scope.
-
-At least one of `AGNES_API_KEY` or `PEXELS_API_KEY` is required for visual scenes. Never commit credentials.
-
-OmniRoute may be used as an ephemeral gateway for LLM requests. It is not a source of free model credits.
+The `.github/workflows/auto-publish.yml` workflow and `nextgen-academy auto-run` command remain the separate one-minute production path. Their provider fallback and scheduling behavior do not apply to the long-form factory. Use the workflow's existing safeguards and review the final output before any public release.
 
 ## Upload and publishing safety
 
