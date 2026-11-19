@@ -32,9 +32,23 @@ nextgen-academy video-plan --topic "How humanoid robots are changing manufacturi
 
 You can replace the default scene descriptions with four `--scene "..." ` arguments.
 
-3. Add reviewed English narration and Persian translations to the scene entries in `output/video-plan.json`. The code does not invent or fact-check documentary claims.
+3. Open `output/storyboard.json` and fill all four `narration_en` and `subtitle_fa` fields. The English narration must be fact-checked and the Persian text must be its faithful translation. The code does not invent or fact-check documentary claims.
 
-4. Submit only after checking the VidoGrid balance:
+4. Generate the Persian subtitle file:
+
+```bash
+nextgen-academy subtitles
+```
+
+5. If Piper is installed and a properly licensed English voice model is downloaded, generate narration locally:
+
+```bash
+nextgen-academy voiceover --model models/piper/your-english-voice.onnx
+```
+
+The model and its matching `.onnx.json` file are both required. Review the model card and commercial-use terms before publishing.
+
+6. Submit only after checking the VidoGrid balance:
 
 ```bash
 nextgen-academy video-submit --confirm-paid-api
@@ -42,17 +56,16 @@ nextgen-academy video-submit --confirm-paid-api
 
 This asks for a second interactive confirmation. Generation may consume credits.
 
-5. Wait for jobs and download the MP4 clips:
+7. Wait for jobs and download the MP4 clips:
 
 ```bash
 nextgen-academy video-download
 ```
 
-6. Create a Persian subtitle track and assemble the video:
+8. Assemble the video with the Persian subtitle track and narration audio:
 
 ```bash
-nextgen-academy subtitles
-nextgen-academy video-render --subtitles output/persian.srt
+nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
 ```
 
 If narration audio is ready, add `--narration-audio path/to/narration.mp3` to the render command.
@@ -60,8 +73,9 @@ If narration audio is ready, add `--narration-audio path/to/narration.mp3` to th
 ## What is not automated yet
 
 - Research source collection and fact-check approval.
-- High-quality English script writing and Persian translation.
-- Text-to-speech generation, background music and sound design.
+- AI-assisted research, fact-checking and script drafting (still manual at present).
+- Automatic voiceover generation is now wired to optional local Piper; a voice model must be installed and its license checked.
+- Background music and sound design.
 - Thumbnail generation, chapter/SEO package, analytics feedback loop.
 - YouTube OAuth and publishing (intentionally disabled until secure channel authorization and approval controls are built).
 
