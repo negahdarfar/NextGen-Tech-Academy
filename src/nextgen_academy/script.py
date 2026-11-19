@@ -55,4 +55,5 @@ def storyboard_subtitles(storyboard_path: str | Path, target: str | Path) -> Pat
 
 
 def _stamp(seconds: int) -> str:
-    return f"00:00:{seconds:02d},000"
+    minutes, remaining = divmod(seconds, 60)
+    return f"{minutes:02d}:{remaining:02d}:00,000"
