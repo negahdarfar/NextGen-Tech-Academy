@@ -35,8 +35,10 @@ def synthesize_storyboard(storyboard_path: str | Path, output_wav: str | Path,
     model = Path(model_path)
     if not model.is_file() or not Path(str(model) + ".json").is_file():
         raise TTSError("Piper model and matching .onnx.json config file are both required.")
-    if not shutil.which("ffmpeg"):
-        raise TTSError("FFmpeg is required to join the narration WAV files.")
+    ffmpeg = shutil.which("ffmpeg")
+    ffprobe = shutil.which("ffprobe")
+    if not ffmpeg or not ffprobe:
+        raise TTSError("FFmpeg and ffprobe are required to prepare synchronized narration.")
 
     root = Path(work_dir) if work_dir else Path(output_wav).parent / "voiceover_parts"
     root.mkdir(parents=True, exist_ok=True)
@@ -53,7 +55,29 @@ def synthesize_storyboard(storyboard_path: str | Path, output_wav: str | Path,
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode != 0 or not target.is_file():
             raise TTSError(f"Piper failed on scene {index}: {result.stderr[-1500:]}")
-        tracks.append(target)
+        probe = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(target)],
+            capture_output=True, text=True,
+        )
+        if probe.returncode != 0:
+            raise TTSError(f"Could not inspect narration duration for scene {index}.")
+        duration = float(probe.stdout.strip())
+        if duration > 15.0:
+            raise TTSError(
+                f"Scene {index} narration is {duration:.1f}s; shorten the English text "
+                "so it fits the 15-second scene."
+            )
+        synchronized = root / f"narration_{index:02d}_15s.wav"
+        padded = subprocess.run(
+            [ffmpeg, "-y", "-i", str(target), "-af",
+             "apad=whole_dur=15,atrim=duration=15", "-c:a", "pcm_s16le",
+             str(synchronized)],
+            capture_output=True, text=True,
+        )
+        if padded.returncode != 0:
+            raise TTSError(f"Could not synchronize scene {index}: {padded.stderr[-1200:]}")
+        tracks.append(synchronized)
 
     concat = root / "voiceover_concat.txt"
     concat.write_text("".join(f"file '{track.resolve().as_posix()}'\n" for track in tracks),
