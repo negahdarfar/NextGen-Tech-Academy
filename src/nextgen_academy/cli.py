@@ -24,6 +24,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
+    documentary = sub.add_parser("documentary-plan", help="create a long-form documentary production blueprint")
+    documentary.add_argument("--topic", required=True)
+    documentary.add_argument("--minutes", type=int, choices=(15, 30, 60), default=15)
+    documentary.add_argument("--clip-seconds", type=int, choices=(4, 6, 8, 10, 12), default=12)
+    documentary.add_argument("--output", default="output/documentary-plan.json")
+
     plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
@@ -84,6 +90,14 @@ def main() -> int:
     args = build_parser().parse_args()
     load_dotenv()
     Settings.from_env()
+
+    if args.command == "documentary-plan":
+        from .documentary_plan import build_documentary_plan, save_documentary_plan
+        plan = build_documentary_plan(args.topic, args.minutes, args.clip_seconds)
+        path = save_documentary_plan(plan, args.output)
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        print(f"Saved documentary production blueprint: {path}")
+        return 0
 
     if args.command == "plan":
         print(json.dumps(plan_as_dict(build_plan(args.topic, args.audience)),
