@@ -12,6 +12,12 @@ on:
         default: "5"
         type: choice
         options: ["3","4","5","6","7","8","9","10"]
+      shorts_count:
+        description: "Number of vertical highlight clips to extract"
+        required: true
+        default: "3"
+        type: choice
+        options: ["3","5","8"]
       upload:
         description: "Upload the finished documentary to YouTube as private"
         required: true
@@ -27,7 +33,7 @@ concurrency:
 jobs:
   produce:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -49,7 +55,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-      - name: Install application
+      - name: Install documentary factory
         run: python -m pip install -e ".[cloud]"
       - name: Produce documentary
         env:
@@ -64,7 +70,52 @@ jobs:
             UPLOAD="--upload"
           fi
           nextgen-academy auto-run --topic "${INPUT_TOPIC}" --duration-minutes "${INPUT_DURATION}" ${UPLOAD}
-      - name: Preserve production outputs
+      - name: Cache local Whisper model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: nextgen-faster-whisper-base-${{ runner.os }}-v1
+      - name: Fetch pinned open-source highlight clipper
+        run: |
+          git clone https://github.com/Anil-matcha/AI-Youtube-Shorts-Generator.git tools/ai-youtube-shorts-generator
+          git -C tools/ai-youtube-shorts-generator checkout 1142a747b0056da5551970e88ca9f1ec85deafc5
+      - name: Install free local clipping dependencies
+        working-directory: tools/ai-youtube-shorts-generator
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-local.txt
+      - name: Extract vertical highlight clips from the finished documentary
+        id: extract_shorts
+        continue-on-error: true
+        working-directory: tools/ai-youtube-shorts-generator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
+          LLM_PROVIDER: gemini
+          LOCAL_WHISPER_MODEL: base
+          LOCAL_WHISPER_DEVICE: cpu
+          LOCAL_OUTPUT_DIR: ${{ github.workspace }}/output/shorts
+          VIDEO_PATH: ${{ github.workspace }}/output/final-video.mp4
+          NUM_CLIPS: ${{ inputs.shorts_count || '3' }}
+          PYTHONUTF8: "1"
+        run: |
+          test -s "$VIDEO_PATH"
+          mkdir -p "$LOCAL_OUTPUT_DIR"
+          python main.py "$VIDEO_PATH" --mode local --num-clips "$NUM_CLIPS" --aspect-ratio 9:16 --language en --output-json "$LOCAL_OUTPUT_DIR/clip-report.json"
+      - name: Report highlight extraction status
+        if: always()
+        env:
+          CLIP_STEP_OUTCOME: ${{ steps.extract_shorts.outcome }}
+        run: |
+          mkdir -p output
+          if [ "$CLIP_STEP_OUTCOME" = "success" ]; then
+            echo "Short-form highlights: generated successfully." > output/shorts-status.txt
+            echo "### Vertical highlight extraction: successful" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Short-form highlights: extraction failed; master documentary is still preserved." > output/shorts-status.txt
+            echo "### Vertical highlight extraction: failed (master documentary preserved)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve all production outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
