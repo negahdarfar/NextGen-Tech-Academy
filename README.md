@@ -34,7 +34,7 @@ Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an 
 
 The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute the process even when the user's laptop is off. GitHub Actions minutes and artifact quotas still apply.
 
-## Local test run (no Ollama)
+## Inspect VidoGrid credits without generating\n\nBefore the first production run, set `VIDOGRID_API_KEY` locally or as a GitHub Actions Secret and inspect the exact account response with `nextgen-academy vidogrid-account`. This command does not submit video jobs or spend generation credits. The production runner performs the same check before using any cloud LLM or TTS quota.\n\n## Local test run (no Ollama)
 
 Requires Python 3.10+ and FFmpeg:
 
