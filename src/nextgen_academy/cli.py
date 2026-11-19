@@ -48,6 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
     clips.add_argument("--storyboard", default="output/storyboard.json",
                        help="use the edited storyboard by default")
     clips.add_argument("--style", default="cinematic documentary, realistic detail, natural motion")
+    clips.add_argument("--storyboard", default="output/storyboard.json",
+                       help="use scene descriptions from the reviewed storyboard when present")
     clips.add_argument("--output", default="output/video-plan.json")
 
     submit = sub.add_parser("video-submit", help="submit clips to VidoGrid (uses credits)")
@@ -116,7 +118,15 @@ def main() -> int:
             storyboard_scenes = storyboard_payload.get("scenes", [])
             scenes = [item["scene"] for item in storyboard_scenes]
         else:
-            scenes = args.scene or [item["scene"] for item in default_storyboard(args.topic)]
+            if args.scene:
+            scenes = args.scene
+        elif Path(args.storyboard).is_file():
+            storyboard_data = json.loads(Path(args.storyboard).read_text(encoding="utf-8"))
+            if storyboard_data.get("topic", args.topic) != args.topic:
+                raise SystemExit("Storyboard topic does not match --topic.")
+            scenes = [item["scene"] for item in storyboard_data.get("scenes", [])]
+        else:
+            scenes = [item["scene"] for item in default_storyboard(args.topic)]
         if len(scenes) != 4:
             raise SystemExit("The current one-minute preset requires exactly four scenes.")
         segments = build_segments(args.topic, scenes, args.style, duration_seconds=15)
