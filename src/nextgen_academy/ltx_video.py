@@ -1,18 +1,18 @@
 """Optional, budget-gated LTX-2.5 video generation with safe Pexels fallback.
 
 The API is paid per generated second. It is disabled unless both LTX_API_KEY
-and a positive LTX_MAX_SPEND_USD are supplied. This local budget limits the
-number of requests submitted by this workflow; it is not a billing hard cap.
+and a positive LTX_MAX_SPEND_USD are supplied. The local budget is a request
+planner, not a provider-side billing hard cap.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-import json
 
 
 class LTXError(RuntimeError):
@@ -92,7 +92,15 @@ class LTXClient:
                 video_url = ((status.get("result") or {}).get("video_url") or "")
                 if not video_url.startswith("https://"):
                     raise LTXError("LTX completed without a valid HTTPS video URL.")
-                return self._download(video_url, target, job_id)
+                self._download(video_url, target)
+                return {
+                    "provider": "ltx-2.5",
+                    "job_id": job_id,
+                    "model": self.model,
+                    "resolution": self.resolution,
+                    "duration_seconds": self.duration,
+                    "estimated_cost_usd": self.estimated_clip_cost,
+                }
             if state == "failed":
                 raise LTXError(f"LTX job failed: {status.get('error', 'unknown error')}")
             if state not in ("pending", "processing"):
@@ -114,7 +122,7 @@ class LTXClient:
             raise LTXError(f"LTX API request failed: {exc}") from exc
 
     @staticmethod
-    def _download(url: str, target: str | Path, job_id: str) -> dict:
+    def _download(url: str, target: str | Path) -> None:
         path = Path(target)
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".part")
@@ -129,11 +137,3 @@ class LTXClient:
             if temporary.exists():
                 temporary.unlink()
             raise
-        return {
-            "provider": "ltx-2.5",
-            "job_id": job_id,
-            "model": "ltx-2.5",
-            "resolution": None,
-            "duration_seconds": None,
-            "estimated_cost_usd": None,
-        }
