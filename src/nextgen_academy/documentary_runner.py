@@ -56,7 +56,7 @@ def produce_documentary(topic: str, minutes: int = 15,
             script_file = root / f"chapter-{number:02d}-script.json"
             if current in {"planned", "researched"}:
                 process_documentary_chapter(state_file, number, root)
-                current = load_run_state(state_file)["chapters"][number - 1]["status"]
+                current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
             if current == "scripted":
                 synthesize_documentary_chapter(
                     state_file, number, script_file, root / "media", voice
