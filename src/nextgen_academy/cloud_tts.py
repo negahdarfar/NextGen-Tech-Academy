@@ -22,6 +22,9 @@ def synthesize_cloud_narration(storyboard_path: str | Path, output_wav: str | Pa
         raise CloudTTSError("FFmpeg is required.")
     root = Path(output_wav).parent / "voice_parts"
     root.mkdir(parents=True, exist_ok=True)
+    edge_tts = shutil.which("edge-tts")
+    if not edge_tts:
+        raise CloudTTSError("edge-tts executable not found; install the cloud extra.")
     tracks = []
     for index, scene in enumerate(scenes, 1):
         text = str(scene.get("narration_en", "")).strip()
@@ -29,7 +32,7 @@ def synthesize_cloud_narration(storyboard_path: str | Path, output_wav: str | Pa
             raise CloudTTSError(f"Scene {index} has no English narration.")
         mp3 = root / f"scene_{index:02d}.mp3"
         wav = root / f"scene_{index:02d}_15s.wav"
-        result = subprocess.run([sys.executable, "-m", "edge_tts", "--voice", voice,
+        result = subprocess.run([edge_tts, "--voice", voice,
                                  "--text", text, "--write-media", str(mp3)],
                                 capture_output=True, text=True)
         if result.returncode or not mp3.is_file():
