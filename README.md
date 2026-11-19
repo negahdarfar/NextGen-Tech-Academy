@@ -28,13 +28,17 @@ Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an 
    - `VIDOGRID_MODEL_ROTATION` (default `grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash`)
    - `VIDOGRID_MODEL_CREDIT_COSTS` (required JSON cost per model; exact account pricing)
    - `VIDOGRID_TOTAL_BALANCE_IS_FREE` (keep `false` unless you have confirmed that the entire VidoGrid `/account` balance consists only of free credits)
-3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_MODEL_CREDIT_COSTS` as a JSON object (for example, `{\"grok-imagine-video-1.5-lite\": 1, \"veo-3.1-fast\": 2, \"omni-1.2-flash\": 2}`) only after checking the exact current credit cost shown in your VidoGrid account. The numbers in this example are placeholders, not actual prices.
+3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_MODEL_CREDIT_COSTS` as a JSON object (for example, `{"grok-imagine-video-1.5-lite": 1, "veo-3.1-fast": 2, "omni-1.2-flash": 2}`) only after checking the exact current credit cost shown in your VidoGrid account. The numbers in this example are placeholders, not actual prices.
 4. Open **Actions → Automated YouTube video factory → Run workflow**. Supply a topic or leave it blank for RSS-based topic discovery.
 5. The workflow uploads privately by default and stores output artifacts for 14 days.
 
 The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute the process even when the user's laptop is off. GitHub Actions minutes and artifact quotas still apply.
 
-## Inspect VidoGrid credits without generating\n\nBefore the first production run, set `VIDOGRID_API_KEY` locally or as a GitHub Actions Secret and inspect the exact account response with `nextgen-academy vidogrid-account`. This command does not submit video jobs or spend generation credits. The production runner performs the same check before using any cloud LLM or TTS quota.\n\n## Local test run (no Ollama)
+## Inspect VidoGrid credits without generating
+
+Before the first production run, set `VIDOGRID_API_KEY` locally or as a GitHub Actions Secret and inspect the exact account response with `nextgen-academy vidogrid-account`. This command does not submit video jobs or spend generation credits. The production runner performs the same check before using any cloud LLM or TTS quota.
+
+## Local test run (no Ollama)
 
 Requires Python 3.10+ and FFmpeg:
 
@@ -45,7 +49,9 @@ nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing
 
 Add credentials to the process environment or a local, ignored `.env` file. Never commit keys or OAuth tokens.
 
-See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorization and secure GitHub secret configuration.\n\n## YouTube publishing safeguards
+See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorization and secure GitHub secret configuration.
+
+## YouTube publishing safeguards
 
 - OAuth refresh-token credentials are required; an API key alone cannot upload to a personal channel.
 - Default visibility is **private**. Public publishing is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is explicitly set.
