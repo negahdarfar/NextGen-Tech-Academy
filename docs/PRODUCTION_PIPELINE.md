@@ -8,9 +8,9 @@ Open **Actions → Automated YouTube documentary factory → Run workflow** or u
 
 1. Discover a technology topic when no topic is supplied and collect up to 20 RSS research leads.
 2. Ask the configured cloud LLM to draft 12-40 ordered scenes, English narration and Persian translations (15 seconds per scene). Every scene must cite known source IDs.
-3. Retrieve matching landscape footage from Pexels and record creator/source attribution.
+3. Retrieve matching landscape footage from Pexels and record creator/source attribution. If LTX is explicitly enabled with an API key and positive budget, generate up to the configured number of selected 8-second cinematic shots using LTX-2.5 Fast at 720p; replace those scene files and retain Pexels for every other scene.
 4. Generate English narration with Edge TTS, normalizing each scene to 15 seconds.
-5. Loop/trim each stock clip to the target scene length, assemble with FFmpeg and mux narration plus Persian subtitles.
+5. Loop/trim each LTX or Pexels clip to the 15-second scene length, assemble with FFmpeg and mux narration plus Persian subtitles.
 6. Validate the rendered duration against the requested 3-10 minute target.
 7. Generate YouTube title, description, tags, chapters and thumbnail prompt.
 8. Run the pinned MIT-licensed local highlight extractor on the completed MP4. Faster-Whisper transcribes the English narration, Gemini ranks engaging moments, and FFmpeg/OpenCV renders 3, 5 or 8 vertical MP4 clips.
@@ -20,9 +20,10 @@ Open **Actions → Automated YouTube documentary factory → Run workflow** or u
 
 - `GEMINI_API_KEY` (required for cloud script generation and highlight ranking)
 - `PEXELS_API_KEY` (Pexels API key; VidoGrid is not used)
+- `LTX_API_KEY` (optional paid API access; LTX is disabled unless a positive budget is configured)
 - `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with `youtube.upload` scope, required only for master upload)
 
-Optional Actions variables: `LLM_PROVIDER_ORDER` and `OPENROUTER_MODEL`.
+Optional Actions variables: `LLM_PROVIDER_ORDER`, `OPENROUTER_MODEL`, `LTX_MAX_SPEND_USD` (default 0), `LTX_MAX_SCENES` (default 2), `LTX_MODEL` (default `ltx-2-5-fast`), `LTX_RESOLUTION` (default `1280x720`), and `LTX_CLIP_SECONDS` (default 8).
 
 ## Outputs
 
@@ -30,10 +31,14 @@ Optional Actions variables: `LLM_PROVIDER_ORDER` and `OPENROUTER_MODEL`.
 - `output/persian.srt`: Persian subtitle file
 - `output/narration.wav`: English voiceover
 - `output/storyboard.json`: bilingual scene script and source references
-- `output/stock-footage-sources.json`: Pexels creator and source attribution
+- `output/stock-footage-sources.json`: per-scene LTX/Pexels provider, LTX job IDs and estimated API spend, plus Pexels creator/source attribution
 - `output/youtube-package.json`: draft metadata and chapter markers
 - `output/shorts/short_*.mp4`: ranked vertical highlights
 - `output/shorts/clip-report.json`: transcript and highlight scores
+
+## LTX-2.5 budget safeguards
+
+LTX API generation is off by default. One 8-second LTX-2.5 Fast 720p clip is about $0.72 at the published $0.09/second rate. The local per-run budget only caps the requests the workflow plans to submit; it is not a provider-enforced billing limit. Confirm the account balance and auto-top-up settings in the LTX console before adding the secret. If no key or no positive budget is present, only Pexels is used. A failed LTX job falls back to its already-downloaded Pexels clip.
 
 ## Safeguards and limitations
 
