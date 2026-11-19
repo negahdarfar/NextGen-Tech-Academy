@@ -1,79 +1,37 @@
-# OmniRoute integration and deployment
+# OmniRoute on ephemeral GitHub-hosted runners
 
-## What this integration changes
+## Architecture
 
-The existing `nextgen_academy.llm.generate_json()` function can use OmniRoute as an optional OpenAI-compatible gateway for structured script-generation requests. The video pipeline, VidoGrid adapter, Edge TTS, FFmpeg renderer, and YouTube publisher are unchanged.
+NextGen starts OmniRoute inside the same GitHub Actions job that runs the video factory. The runner installs Node.js 22 and the pinned OmniRoute package, starts the gateway on loopback, checks its local model endpoint, and then runs the existing Python production pipeline. The runner is discarded after the job. No always-on VPS, public gateway URL, laptop, or Ollama installation is required.
 
-Default provider order is now:
+The gateway is deliberately bound to `127.0.0.1`; it is not exposed to the public internet. The workflow uses a short-lived, job-local bearer placeholder while the gateway's client API key enforcement remains at its default disabled state. Do not expose this ephemeral setup beyond the runner.
 
-`omniroute,gemini,groq,openrouter`
+## Provider credentials
 
-A provider is skipped when its required secret is absent. A request failure is recorded and the next configured provider is attempted.
+The existing GitHub Actions secret `GEMINI_API_KEY` is passed to the runner and OmniRoute as a provider credential. No additional OmniRoute secret is required for this mode. The default routed model is `gemini/gemini-2.5-flash`; change it with the optional Actions variable `OMNIROUTE_MODEL` only after verifying the model and its billing tier in the provider account.
 
-## Required configuration
+A Gemini API key does not guarantee free use. Google's free-tier eligibility, limits, model availability, and billing settings control actual charges. Confirm the Google AI Studio / Cloud project has the intended billing configuration before enabling scheduled production.
 
-Set these as GitHub Actions repository **Secrets**:
+## Workflow behavior
 
-- `OMNIROUTE_BASE_URL`: HTTPS URL reachable from the GitHub-hosted runner, normally ending in `/v1`.
-- `OMNIROUTE_API_KEY`: endpoint key created in OmniRoute Dashboard → Endpoints.
+1. GitHub Actions checks out the repository.
+2. Node.js 22 is installed.
+3. If `GEMINI_API_KEY` exists, the workflow installs `omniroute@3.8.55`, starts it on loopback, and polls `/v1/models`.
+4. Python and FFmpeg are installed.
+5. NextGen runs its existing credit-guarded production pipeline. The LLM adapter tries OmniRoute first, then the existing configured Gemini/Groq/OpenRouter adapters according to `LLM_PROVIDER_ORDER`.
+6. The existing private-by-default YouTube upload behavior and artifact retention remain unchanged.
+7. GitHub discards the runner after the job.
 
-Optional GitHub Actions **Variables**:
+The current workflow does not need `OMNIROUTE_BASE_URL` or `OMNIROUTE_API_KEY` repository secrets. It sets these locally for the current runner only. If Gemini is not configured, the OmniRoute startup step is skipped and the existing provider chain remains available.
 
-- `OMNIROUTE_MODEL`: defaults to `auto/subscription`.
-- `LLM_PROVIDER_ORDER`: defaults to `omniroute,gemini,groq,openrouter`.
+## Cost and safety
 
-Example values (not credentials):
+OmniRoute is a routing gateway, not a source of free credits. This implementation uses the explicit Gemini model by default rather than assuming an undocumented `auto/subscription` route. A free-tier API key may still be rate-limited or unavailable, and a project with billing enabled may incur charges. Check the provider's current console and terms.
 
-```text
-OMNIROUTE_BASE_URL=https://ai-gateway.example.com/v1
-OMNIROUTE_MODEL=auto/subscription
-LLM_PROVIDER_ORDER=omniroute,gemini,groq,openrouter
-```
+The workflow retains the existing VidoGrid free-credit guard and private YouTube upload default. LLM provider fallback is configurable; if strict zero-cost behavior is required, configure only providers/models whose no-charge status and hard-stop behavior have been verified. Never assume a provider will stop instead of billing after a quota is exhausted.
 
-Do not put API keys in repository files, frontend JavaScript, issue comments, workflow logs, or commit history.
+## Manual verification
 
-## Important: GitHub-hosted runner networking
+After the pull request is merged, open Actions → Automated YouTube video factory and run it with a topic. Check the log for “OmniRoute is ready on the GitHub-hosted runner.” The first full run still requires valid VidoGrid credentials and separately verified free-credit cost settings, Edge TTS network availability, and YouTube OAuth JSON if upload is enabled.
 
-The NextGen production pipeline runs on GitHub-hosted runners. Therefore `http://127.0.0.1:20128/v1` only works for a local test where OmniRoute and NextGen run on the same machine. It is not reachable from GitHub Actions.
-
-For cloud automation, OmniRoute must be running on a server reachable over HTTPS. Deploy it behind a TLS reverse proxy or a private access gateway. Do not expose the OmniRoute dashboard or an unauthenticated API to the public internet. Restrict inbound access where possible, use a strong dedicated endpoint key, rotate it if exposed, and keep provider credentials inside OmniRoute's encrypted credential store.
-
-If you do not have a secure, always-reachable host, leave `OMNIROUTE_API_KEY` unset; NextGen will continue using the existing Gemini/Groq/OpenRouter fallback providers. Do not create a public tunnel to an unprotected local dashboard as a shortcut.
-
-## Provider and cost setup
-
-1. Install and start OmniRoute using its official instructions: https://github.com/cheaper-inference/OmniRoute
-2. Open its dashboard and connect a provider whose terms permit your intended use.
-3. Create a dedicated endpoint key in Dashboard → Endpoints.
-4. Configure NextGen's two GitHub Actions secrets.
-5. Set `OMNIROUTE_MODEL=auto/subscription` for subscription-quota-only routing.
-6. Run a manual workflow and inspect its logs/artifacts before relying on the scheduled run.
-
-OmniRoute is a gateway, not a source of free credits. Provider free tiers can have eligibility, regional, rate, and usage restrictions. The `auto/subscription` route is intended to fail closed rather than silently select a billable fallback. Avoid `auto`, `auto/cheap`, or explicitly paid model IDs unless you have deliberately accepted their billing behavior.
-
-## Local smoke test
-
-Run OmniRoute locally, create an endpoint key, then set:
-
-```bash
-export OMNIROUTE_BASE_URL="http://127.0.0.1:20128/v1"
-export OMNIROUTE_API_KEY="YOUR_ENDPOINT_KEY"
-export OMNIROUTE_MODEL="auto/subscription"
-export LLM_PROVIDER_ORDER="omniroute"
-```
-
-The gateway API can be checked independently:
-
-```bash
-curl "$OMNIROUTE_BASE_URL/models" \
-  -H "Authorization: Bearer $OMNIROUTE_API_KEY"
-```
-
-Then run the existing NextGen test suite and a non-publishing local workflow. The first successful HTTP response only verifies gateway connectivity; validate JSON schema, model eligibility, cost/quota behavior, and the complete production stages separately.
-
-## Known boundaries
-
-- OmniRoute integration currently covers the language-model JSON generation adapter only.
-- It does not route VidoGrid video generation, Edge TTS, FFmpeg, Supabase, or YouTube uploads.
-- A live end-to-end check still requires the user's server URL, endpoint key, provider connection, and GitHub Actions secrets. None of these secrets are stored in this repository.
-- This repository change does not change the default private-upload safeguard or enable public publishing.
+No credentials are written to the repository, and no live provider request or video generation is performed by the code change itself.
