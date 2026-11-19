@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --global npm@11
+          npm install --global npm@11 || { echo 'npm upgrade failed; direct LLM fallback will be used.'; exit 0; }
           npm install --global npm@11
           npm install --global --allow-scripts=omniroute,better-sqlite3,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild omniroute@3.8.55
           export DATA_DIR="$RUNNER_TEMP/omniroute-data"
@@ -65,7 +65,7 @@ jobs:
           export INITIAL_PASSWORD="$(openssl rand -hex 32)"
           export JWT_SECRET="$(openssl rand -hex 32)"
           export API_KEY_SECRET="$(openssl rand -hex 32)"
-          omniroute setup --non-interactive --password "$INITIAL_PASSWORD"
+          omniroute setup --non-interactive --password "$INITIAL_PASSWORD" || { echo "OmniRoute setup failed; direct LLM fallback will be used."; exit 0; }
           nohup omniroute --no-open > "$RUNNER_TEMP/omniroute.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/omniroute.pid"
           READY=false
@@ -78,13 +78,14 @@ jobs:
           done
           if [ "$READY" != "true" ]; then
             cat "$RUNNER_TEMP/omniroute.log"
-            echo "OmniRoute failed to start."
-            exit 1
+            echo "OmniRoute failed to start; direct LLM fallback will be used."
+            exit 0
           fi
           if ! grep -Fq "$OMNIROUTE_MODEL" "$RUNNER_TEMP/omniroute-models.json"; then
             echo "Expected Gemini model not available in OmniRoute catalog."
             cat "$RUNNER_TEMP/omniroute-models.json"
-            exit 1
+            kill "$(cat "$RUNNER_TEMP/omniroute.pid")" || true
+            exit 0
           fi
           {
             echo "OMNIROUTE_BASE_URL=http://127.0.0.1:20128/v1"
