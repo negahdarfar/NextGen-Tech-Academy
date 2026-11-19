@@ -1,27 +1,33 @@
-name: Automated YouTube video factory
+name: Automated YouTube documentary factory
 on:
   workflow_dispatch:
     inputs:
       topic:
-        description: "Optional topic; leave blank for automatic discovery"
+        description: "Optional documentary topic; leave blank for automatic discovery"
         required: false
         type: string
-      upload:
-        description: "Upload the result to YouTube as private"
+      duration_minutes:
+        description: "Documentary duration (3-10 minutes)"
         required: true
-        default: true
+        default: "5"
+        type: choice
+        options: ["3","4","5","6","7","8","9","10"]
+      upload:
+        description: "Upload the finished documentary to YouTube as private"
+        required: true
+        default: false
         type: boolean
   schedule:
     - cron: "17 6 * * 2,5"
 permissions:
   contents: read
 concurrency:
-  group: nextgen-video-factory
+  group: nextgen-documentary-factory
   cancel-in-progress: false
 jobs:
   produce:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -45,22 +51,24 @@ jobs:
           sudo apt-get install -y ffmpeg
       - name: Install application
         run: python -m pip install -e ".[cloud]"
-      - name: Produce, render and upload privately
+      - name: Produce documentary
         env:
           INPUT_TOPIC: ${{ inputs.topic }}
+          INPUT_DURATION: ${{ inputs.duration_minutes || '5' }}
           INPUT_UPLOAD: ${{ inputs.upload }}
         run: |
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then UPLOAD=true; else UPLOAD="${INPUT_UPLOAD}"; fi
-          if [ "${UPLOAD}" = "true" ]; then
-            nextgen-academy auto-run --topic "${INPUT_TOPIC}" --upload
-          else
-            nextgen-academy auto-run --topic "${INPUT_TOPIC}"
+          UPLOAD=""
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            UPLOAD="--upload"
+          elif [ "${INPUT_UPLOAD}" = "true" ]; then
+            UPLOAD="--upload"
           fi
+          nextgen-academy auto-run --topic "${INPUT_TOPIC}" --duration-minutes "${INPUT_DURATION}" ${UPLOAD}
       - name: Preserve production outputs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: nextgen-production-${{ github.run_number }}
+          name: nextgen-documentary-${{ github.run_number }}
           path: output/
           if-no-files-found: warn
           retention-days: 14
