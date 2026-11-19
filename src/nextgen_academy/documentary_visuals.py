@@ -121,4 +121,4 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
     return {"chapter": chapter_number, "status": manifest["status"],
             "shot_count": len(manifest["shots"]), "providers_used": manifest["providers_used"],
             "manifest_path": str(manifest_path),
-            "resumed_existing_shots": len(completed) - len(saved) + len(saved)}
+            "resumed_existing_shots": resumed_count}
