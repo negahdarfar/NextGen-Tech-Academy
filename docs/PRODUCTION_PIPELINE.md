@@ -142,3 +142,26 @@ nextgen-academy documentary-produce --topic "How AI is changing scientific resea
 ```
 
 The command initializes a blueprint only when the state file does not exist, then resumes chapter-by-chapter at the last saved stage. It stops on a failed chapter without discarding completed work. It does not upload to YouTube. The `longform-documentary.yml` workflow offers the same path from Actions → Long-form documentary factory; generation must be explicitly confirmed, and output is retained as a private workflow artifact. A topic-and-duration-scoped GitHub Actions cache restores the previous run state and generated media on retry, so completed chapters and clips are reused when a job is interrupted. Its zero-budget mode requires FreeLLMAPI with explicit free-model catalogue entries or an OpenRouter model ending in `:free`, plus Pexels for visuals. Agnes requires a separate potential-cost acknowledgement. A 60-minute run can require hundreds of video-provider requests and may exceed free quotas or runner time; use staged/resumable runs and verify the current provider quota before starting.
+
+
+### Human-reviewed YouTube publishing
+
+The long-form factory deliberately stops after rendering and creating `youtube-package.json`. It does not upload automatically. Watch the complete MP4, verify claims against the original sources, check Pexels/AI asset terms, and review Persian subtitle timing. Only then mark each chapter reviewed:
+
+```bash
+nextgen-academy documentary-progress --state output/documentary-run.json --chapter 1 --status reviewed
+```
+
+Repeat for all eight chapters. When the run state reports `ready_for_human_approval`, upload privately (default) with a separate confirmation:
+
+```bash
+nextgen-academy documentary-upload --approve-upload
+```
+
+Public visibility requires two explicit flags and a valid YouTube OAuth secret:
+
+```bash
+nextgen-academy documentary-upload --privacy-status public --approve-upload --approve-public
+```
+
+The uploader requires `YOUTUBE_TOKEN_JSON` with the YouTube upload OAuth scope. The long-form production workflow itself never uploads or publishes. Private/unlisted/public visibility is checked again at upload time; public is blocked unless the second approval is supplied.
