@@ -61,7 +61,7 @@ def _run_with_outputs(tmp_path):
     clip = tmp_path / "clip.mp4"; clip.write_bytes(b"v" * 2048)
     manifest = tmp_path / "assets.json"
     manifest.write_text(json.dumps({"status": "complete", "shots": [
-        {"shot": 1, "local_path": str(clip), "provider": "agnes"}
+        {"shot": 1, "local_path": str(clip), "provider": "agnes", "model": "agnes-video-2.5-flash", "video_id": "test-job"}
     ]}))
     update_chapter_state(state, 1, outputs={"narration_audio": str(audio),
         "persian_subtitles": str(srt), "visual_manifest": str(manifest)})
@@ -73,6 +73,10 @@ def test_assembles_all_chapters_and_checkpoints_without_public_upload(tmp_path, 
     monkeypatch.setattr(documentary_assembly.shutil, "which", lambda name: "/usr/bin/" + name)
     monkeypatch.setattr(documentary_assembly, "_duration", lambda ffprobe, path: 60.0)
     def fake_run(command):
+        if "-show_entries" in command:
+            return json.dumps({"streams": [
+                {"codec_type": "video", "width": 1920, "height": 1080, "avg_frame_rate": "30/1"},
+                {"codec_type": "audio"}, {"codec_type": "subtitle"}]})
         if command[-1].endswith(".mp4") or command[-1].endswith(".wav"):
             Path(command[-1]).write_bytes(b"z" * 2048)
         return ""
