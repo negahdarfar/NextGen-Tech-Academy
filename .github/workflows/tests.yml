@@ -36,8 +36,7 @@ jobs:
           node-version: "22.22.2"
       - name: Install OmniRoute
         run: |
-          npm install --global npm@11
-          npm install --global --allow-scripts=omniroute,better-sqlite3,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild omniroute@3.8.55
+          npm install --global omniroute@3.8.55
       - name: Initialize and start local gateway
         shell: bash
         run: |
