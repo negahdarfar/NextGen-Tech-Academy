@@ -76,6 +76,8 @@ def assemble_documentary_run(state_path: str | Path,
         raise DocumentaryAssemblyError("Run has no chapters.")
     chapter_inputs = []
     for chapter in state["chapters"]:
+        if chapter.get("status") not in {"narrated", "assembled", "reviewed"}:
+            raise DocumentaryAssemblyError(f"Chapter {chapter['chapter']} has not completed narration.")
         outputs = chapter.get("outputs", {})
         required = ("narration_audio", "persian_subtitles", "visual_manifest")
         missing = [key for key in required if not outputs.get(key)]
@@ -92,6 +94,13 @@ def assemble_documentary_run(state_path: str | Path,
             clip = Path(shot.get("local_path", ""))
             if not clip.is_file() or clip.stat().st_size < 1024:
                 raise DocumentaryAssemblyError(f"Chapter {chapter['chapter']} has a missing visual clip.")
+            provider = shot.get("provider")
+            if provider == "pexels" and not (shot.get("source_url") and shot.get("photographer")):
+                raise DocumentaryAssemblyError("Pexels asset is missing photographer/source attribution.")
+            if provider == "agnes" and not (shot.get("model") and shot.get("video_id")):
+                raise DocumentaryAssemblyError("Agnes asset is missing model/video provenance.")
+            if provider not in {"agnes", "pexels"}:
+                raise DocumentaryAssemblyError(f"Unknown visual provider provenance: {provider}")
         chapter_inputs.append((chapter, audio, subtitles, shots))
 
     target_seconds = float(state.get("target_duration_seconds") or 0)
@@ -140,6 +149,23 @@ def assemble_documentary_run(state_path: str | Path,
               "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
               "-c:s", "mov_text", "-movflags", "+faststart", "-shortest", str(output)])
 
+    probe_raw = _run([ffprobe, "-v", "error", "-show_entries",
+                      "stream=codec_type,width,height,avg_frame_rate:format=duration",
+                      "-of", "json", str(output)])
+    try:
+        probe_data = json.loads(probe_raw)
+    except json.JSONDecodeError as exc:
+        raise DocumentaryAssemblyError("ffprobe returned invalid final-media metadata.") from exc
+    streams = probe_data.get("streams", [])
+    video_stream = next((item for item in streams if item.get("codec_type") == "video"), None)
+    if not video_stream or video_stream.get("width") != 1920 or video_stream.get("height") != 1080:
+        raise DocumentaryAssemblyError("Final video failed the 1920x1080 resolution check.")
+    if video_stream.get("avg_frame_rate") not in {"30/1", "30000/1001"}:
+        raise DocumentaryAssemblyError("Final video failed the 30fps frame-rate check.")
+    if not any(item.get("codec_type") == "audio" for item in streams):
+        raise DocumentaryAssemblyError("Final video has no narration audio stream.")
+    if not any(item.get("codec_type") == "subtitle" for item in streams):
+        raise DocumentaryAssemblyError("Final video has no Persian subtitle stream.")
     actual = _duration(ffprobe, output)
     tolerance = max(30.0, target_seconds * 0.20)
     if target_seconds and abs(actual - target_seconds) > tolerance:
