@@ -7,6 +7,10 @@ on:
     branches: [main, feat/initial-project-foundation, feat/omniroute-integration]
   workflow_dispatch:
 
+concurrency:
+  group: omniroute-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
