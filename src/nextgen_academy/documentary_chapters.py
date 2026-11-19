@@ -11,7 +11,7 @@ from .research import discover_sources
 
 SYSTEM_PROMPT = """You are a rigorous long-form technology documentary writer.
 Return one JSON object with exactly these keys:
-{"narration_en":"...","subtitle_fa":"...","claims":[{"text":"...","source_ids":["src1"]}],"visual_shots":[{"visual_prompt":"..."}]}
+{"narration_en":"...","subtitle_fa":"...","claims":[{"text":"...","source_ids":["src1"]}],"visual_shots":[{"visual_prompt":"...","stock_search_query":"short stock footage search terms"}]}
 Write a coherent documentary chapter, not a short summary. Aim for the requested spoken-word count.
 The English narration must be natural voiceover prose. The Persian text must faithfully translate
 the complete English narration, not summarize it. Do not invent facts, numbers, dates, quotations,
@@ -20,7 +20,7 @@ Sources are discovery leads, not independently verified evidence. Clearly qualif
 Do not include headings, markdown fences, or production directions in narration.
 Return exactly the requested number of distinct visual_shots. Each visual_prompt must describe a
 concrete cinematic 16:9 shot, with subject, setting, action, camera movement and continuity.
-No text overlays, logos, or watermarks."""
+For each shot also provide stock_search_query: 3–6 concise plain-language search terms suitable for a stock-video search. No text overlays, logos, or watermarks."""
 
 
 def process_documentary_chapter(
@@ -111,6 +111,8 @@ def process_documentary_chapter(
     for index, shot in enumerate(visual_shots, 1):
         if not isinstance(shot, dict) or not str(shot.get("visual_prompt", "")).strip():
             raise ValueError(f"Visual shot {index} is missing visual_prompt.")
+        if not str(shot.get("stock_search_query", "")).strip():
+            raise ValueError(f"Visual shot {index} is missing stock_search_query.")
 
     word_count = len(narration.split())
     if not max(50, int(words * 0.65)) <= word_count <= int(words * 1.35):
