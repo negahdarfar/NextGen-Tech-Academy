@@ -21,12 +21,13 @@ Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an 
 
 1. Add repository **Actions secrets**:
    - `VIDOGRID_API_KEY`
-   - At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`
+   - At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` (OpenRouter only runs a model ending in `:free` unless `ALLOW_PAID_LLM=true` is explicitly set)
    - `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with the `youtube.upload` scope)
 2. Add repository **Actions variables** if needed:
    - `LLM_PROVIDER_ORDER` (default `gemini,groq,openrouter`)
    - `VIDOGRID_MODEL_ROTATION` (default `grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash`)
    - `VIDOGRID_MODEL_CREDIT_COSTS` (required JSON cost per model; exact account pricing)
+   - `VIDOGRID_TOTAL_BALANCE_IS_FREE` (keep `false` unless you have confirmed that the entire VidoGrid `/account` balance consists only of free credits)
 3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_MODEL_CREDIT_COSTS` as a JSON object (for example, `{\"grok-imagine-video-1.5-lite\": 1, \"veo-3.1-fast\": 2, \"omni-1.2-flash\": 2}`) only after checking the exact current credit cost shown in your VidoGrid account. The numbers in this example are placeholders, not actual prices.
 4. Open **Actions → Automated YouTube video factory → Run workflow**. Supply a topic or leave it blank for RSS-based topic discovery.
 5. The workflow uploads privately by default and stores output artifacts for 14 days.
@@ -56,6 +57,6 @@ Add credentials to the process environment or a local, ignored `.env` file. Neve
 
 - The first cloud end-to-end run has not yet been validated against the user's live VidoGrid account, cloud LLM keys, TTS endpoint or YouTube OAuth credentials.
 - Free API tiers and model access vary by provider and can change without notice.
-- The credit guard blocks generation unless a separate free/trial balance is visible and a per-clip estimate is configured. If VidoGrid only reports a combined balance, the safe behavior is to stop.
+- The credit guard blocks generation unless a separate free/trial balance is visible and a per-clip estimate is configured. If VidoGrid only reports a combined balance, the safe behavior is to stop. An explicit `VIDOGRID_TOTAL_BALANCE_IS_FREE=true` opt-in is available only if you have verified that no paid credits are included.
 - No public upload is enabled by default.
 - VidoGrid may return model-specific durations or output schemas; inspect the first live run before enabling recurring automation.
