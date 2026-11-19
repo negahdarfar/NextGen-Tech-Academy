@@ -15,12 +15,17 @@ on:
       privacy_status:
         description: "YouTube visibility for this manual run (scheduled runs remain private)"
         required: true
-        default: public
+        default: private
         type: choice
         options:
-          - public
-          - unlisted
           - private
+          - unlisted
+          - public
+      approve_publication:
+        description: "Explicitly approve public publishing after reviewing the generated video and metadata"
+        required: true
+        default: false
+        type: boolean
   schedule:
     - cron: "17 6 * * 2,5"
 
@@ -51,7 +56,7 @@ jobs:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
       YOUTUBE_PRIVACY_STATUS: ${{ github.event_name == 'workflow_dispatch' && inputs.privacy_status || 'private' }}
-      YOUTUBE_ALLOW_PUBLIC: ${{ github.event_name == 'workflow_dispatch' && inputs.privacy_status == 'public' && 'true' || 'false' }}
+      YOUTUBE_ALLOW_PUBLIC: ${{ github.event_name == 'workflow_dispatch' && inputs.privacy_status == 'public' && inputs.approve_publication == true && 'true' || 'false' }}
       TTS_VOICE: en-US-AriaNeural
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +72,7 @@ jobs:
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
           INPUT_UPLOAD: ${{ inputs.upload }}
           INPUT_PRIVACY_STATUS: ${{ inputs.privacy_status }}
+          INPUT_APPROVE_PUBLICATION: ${{ inputs.approve_publication }}
         run: |
           set -euo pipefail
           [ -n "$AGNES_API_KEY$PEXELS_API_KEY" ] || { echo "Configure AGNES_API_KEY (Agnes AI video) or PEXELS_API_KEY (free stock footage)."; exit 1; }
@@ -86,9 +92,13 @@ jobs:
           [ -n "$YOUTUBE_TOKEN_JSON" ] && echo "YOUTUBE_TOKEN_JSON: present" || echo "YOUTUBE_TOKEN_JSON: missing"
           [ -n "$PEXELS_API_KEY" ] && echo "PEXELS_API_KEY: present" || echo "PEXELS_API_KEY: missing"
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$INPUT_PRIVACY_STATUS" = "public" ]; then
-            echo "Manual run is configured for PUBLIC YouTube visibility."
+            if [ "$INPUT_APPROVE_PUBLICATION" != "true" ]; then
+              echo "::error::Public publishing requires the separate approve_publication confirmation. No video generation or upload will start."
+              exit 1
+            fi
+            echo "Explicit public-publishing approval received."
           else
-            echo "This run is not configured for public visibility."
+            echo "This run is private or unlisted; scheduled runs remain private."
           fi
       - uses: actions/setup-node@v4
         with:
