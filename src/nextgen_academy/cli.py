@@ -55,7 +55,29 @@ def build_parser() -> argparse.ArgumentParser:
     chapter_voice.add_argument("--output-dir", default="output/documentary/media")
     chapter_voice.add_argument("--voice", default="en-US-AriaNeural")
 
-    chapter_visuals = sub.add_parser("documentary-visuals", help="generate and checkpoint the chapter visual clips")\n    chapter_visuals.add_argument("--state", default="output/documentary-run.json")\n    chapter_visuals.add_argument("--chapter", type=int, required=True)\n    chapter_visuals.add_argument("--script", required=True)\n    chapter_visuals.add_argument("--output-dir", default="output/documentary/visuals")\n    chapter_visuals.add_argument("--provider", choices=("auto", "agnes", "pexels"), default="auto")\n    chapter_visuals.add_argument("--allow-agnes-potential-cost", action="store_true")\n\n    documentary_assemble = sub.add_parser("documentary-assemble", help="assemble all narrated chapters and generated visuals into a long-form MP4")\n    documentary_assemble.add_argument("--state", default="output/documentary-run.json")\n    documentary_assemble.add_argument("--output", default="output/documentary/final-documentary.mp4")\n\n    documentary_produce = sub.add_parser("documentary-produce", help="resume the complete long-form documentary factory; never uploads")\n    documentary_produce.add_argument("--topic", default="")\n    documentary_produce.add_argument("--minutes", type=int, choices=(15, 30, 60), default=15)\n    documentary_produce.add_argument("--state", default="output/documentary-run.json")\n    documentary_produce.add_argument("--output-dir", default="output/documentary")\n    documentary_produce.add_argument("--provider", choices=("auto", "agnes", "pexels"), default="auto")\n    documentary_produce.add_argument("--voice", default="en-US-AriaNeural")\n    documentary_produce.add_argument("--confirm-provider-requests", action="store_true", help="explicitly allow external LLM, TTS and visual-provider requests")\n    documentary_produce.add_argument("--allow-agnes-potential-cost", action="store_true", help="separate acknowledgement that Agnes may be chargeable if its promotion has ended")\n\n    plan = sub.add_parser("plan", help="create a research/production plan")
+    chapter_visuals = sub.add_parser("documentary-visuals", help="generate and checkpoint chapter visual clips")
+    chapter_visuals.add_argument("--state", default="output/documentary-run.json")
+    chapter_visuals.add_argument("--chapter", type=int, required=True)
+    chapter_visuals.add_argument("--script", required=True)
+    chapter_visuals.add_argument("--output-dir", default="output/documentary/visuals")
+    chapter_visuals.add_argument("--provider", choices=("auto", "agnes", "pexels"), default="auto")
+    chapter_visuals.add_argument("--allow-agnes-potential-cost", action="store_true")
+
+    documentary_assemble = sub.add_parser("documentary-assemble", help="assemble all narrated chapters and generated visuals into a long-form MP4")
+    documentary_assemble.add_argument("--state", default="output/documentary-run.json")
+    documentary_assemble.add_argument("--output", default="output/documentary/final-documentary.mp4")
+
+    documentary_produce = sub.add_parser("documentary-produce", help="resume the complete long-form documentary factory; never uploads")
+    documentary_produce.add_argument("--topic", default="")
+    documentary_produce.add_argument("--minutes", type=int, choices=(15, 30, 60), default=15)
+    documentary_produce.add_argument("--state", default="output/documentary-run.json")
+    documentary_produce.add_argument("--output-dir", default="output/documentary")
+    documentary_produce.add_argument("--provider", choices=("auto", "agnes", "pexels"), default="auto")
+    documentary_produce.add_argument("--voice", default="en-US-AriaNeural")
+    documentary_produce.add_argument("--confirm-provider-requests", action="store_true", help="explicitly allow external LLM, TTS and visual-provider requests")
+    documentary_produce.add_argument("--allow-agnes-potential-cost", action="store_true", help="separate acknowledgement that Agnes may be chargeable if its promotion has ended")
+
+    plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
 
@@ -158,7 +180,32 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
-    if args.command == "documentary-produce":\n        from .documentary_runner import produce_documentary\n        result = produce_documentary(args.topic, args.minutes, args.state, args.output_dir,\n                                     args.provider, args.voice, args.confirm_provider_requests,\n                                     args.allow_agnes_potential_cost)\n        print(json.dumps(result, ensure_ascii=False, indent=2))\n        return 0\n\n    if args.command == "documentary-visuals":\n        from .documentary_visuals import generate_chapter_visuals\n        result = generate_chapter_visuals(args.state, args.chapter, args.script, args.output_dir, args.provider, args.allow_agnes_potential_cost)\n        print(json.dumps(result, ensure_ascii=False, indent=2))\n        return 0\n\n    if args.command == "documentary-assemble":\n        from .documentary_assembly import assemble_documentary_run\n        result = assemble_documentary_run(args.state, args.output)\n        print(json.dumps(result, ensure_ascii=False, indent=2))\n        return 0\n\n    if args.command == "plan":
+    if args.command == "documentary-produce":
+        from .documentary_runner import produce_documentary
+        result = produce_documentary(
+            args.topic, args.minutes, args.state, args.output_dir,
+            args.provider, args.voice, args.confirm_provider_requests,
+            args.allow_agnes_potential_cost,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "documentary-visuals":
+        from .documentary_visuals import generate_chapter_visuals
+        result = generate_chapter_visuals(
+            args.state, args.chapter, args.script, args.output_dir,
+            args.provider, args.allow_agnes_potential_cost,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "documentary-assemble":
+        from .documentary_assembly import assemble_documentary_run
+        result = assemble_documentary_run(args.state, args.output)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "plan":
         print(json.dumps(plan_as_dict(build_plan(args.topic, args.audience)),
                          ensure_ascii=False, indent=2))
         return 0
