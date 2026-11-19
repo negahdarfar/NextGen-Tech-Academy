@@ -45,7 +45,6 @@ jobs:
           export JWT_SECRET="$(openssl rand -hex 32)"
           export API_KEY_SECRET="$(openssl rand -hex 32)"
           mkdir -p "$DATA_DIR"
-          omniroute setup --non-interactive --password "$INITIAL_PASSWORD"
           nohup omniroute --no-open > "$RUNNER_TEMP/omniroute-smoke.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/omniroute-smoke.pid"
           for attempt in $(seq 1 60); do
