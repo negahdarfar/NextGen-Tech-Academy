@@ -34,6 +34,8 @@ def test_process_chapter_researches_writes_script_and_updates_state(tmp_path, mo
     assert result["status"] == "scripted"
     saved = load_run_state(state)["chapters"][0]
     assert saved["status"] == "scripted"
+    assert saved["target_narration_words"] == 100
+    assert saved["duration_seconds"] == 45
     assert (tmp_path / "out" / "chapter-01-script.json").is_file()
 
 
