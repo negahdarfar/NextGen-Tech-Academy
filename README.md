@@ -34,13 +34,13 @@ nextgen-academy video-plan --topic "How humanoid robots are changing manufacturi
 
 You can replace the visual scene descriptions with four `--scene "..." ` arguments.
 
-5. Generate the Persian subtitle file:
+6. Generate the Persian subtitle file:
 
 ```bash
 nextgen-academy subtitles
 ```
 
-6. If Piper is installed and a properly licensed English voice model is downloaded, generate narration locally:
+7. If Piper is installed and a properly licensed English voice model is downloaded, generate narration locally:
 
 ```bash
 nextgen-academy voiceover --model models/piper/your-english-voice.onnx
@@ -48,7 +48,7 @@ nextgen-academy voiceover --model models/piper/your-english-voice.onnx
 
 The model and its matching `.onnx.json` file are both required. Review the model card and commercial-use terms before publishing.
 
-7. Submit only after checking the VidoGrid balance:
+8. Submit only after checking the VidoGrid balance:
 
 ```bash
 nextgen-academy video-submit --confirm-paid-api
@@ -56,19 +56,19 @@ nextgen-academy video-submit --confirm-paid-api
 
 This asks for a second interactive confirmation. Generation may consume credits.
 
-8. Wait for jobs and download the MP4 clips:
+9. Wait for jobs and download the MP4 clips:
 
 ```bash
 nextgen-academy video-download
 ```
 
-9. Generate an editable YouTube metadata package (title options, description template, chapters, tags and thumbnail prompt):
+10. Generate an editable YouTube metadata package (title options, description template, chapters, tags and thumbnail prompt):
 
 ```bash
 nextgen-academy youtube-package
 ```
 
-10. Assemble the video with the Persian subtitle track and narration audio:
+11. Assemble the video with the Persian subtitle track and narration audio:
 
 ```bash
 nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
@@ -76,7 +76,7 @@ nextgen-academy video-render --subtitles output/persian.srt --narration-audio ou
 
 ## What is not automated yet
 
-- Automated research source collection, fact-checking and script drafting (still manual at present).
+- Automated web research and fact-checking (manual source collection and human verification remain required). Local Ollama can draft the bilingual script.
 - Automatic voiceover generation is now wired to optional local Piper; a voice model must be installed and its license checked.
 - Background music and sound design.
 - Thumbnail image generation and analytics feedback loop. An editable SEO/publishing metadata draft is generated; it is not keyword research or a ranking guarantee.
