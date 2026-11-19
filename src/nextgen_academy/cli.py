@@ -48,6 +48,13 @@ def build_parser() -> argparse.ArgumentParser:
     chapter_work.add_argument("--output-dir", default="output/documentary")
     chapter_work.add_argument("--force", action="store_true", help="deliberately regenerate an existing chapter")
 
+    chapter_voice = sub.add_parser("documentary-voice", help="synthesize one scripted chapter and create estimated Persian SRT timings")
+    chapter_voice.add_argument("--state", default="output/documentary-run.json")
+    chapter_voice.add_argument("--chapter", type=int, required=True)
+    chapter_voice.add_argument("--script", required=True)
+    chapter_voice.add_argument("--output-dir", default="output/documentary/media")
+    chapter_voice.add_argument("--voice", default="en-US-AriaNeural")
+
     plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
@@ -141,6 +148,13 @@ def main() -> int:
         from .documentary_chapters import process_documentary_chapter
         result = process_documentary_chapter(args.state, args.chapter,
                                              args.output_dir, force=args.force)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "documentary-voice":
+        from .documentary_media import synthesize_documentary_chapter
+        result = synthesize_documentary_chapter(args.state, args.chapter, args.script,
+                                                args.output_dir, args.voice)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
