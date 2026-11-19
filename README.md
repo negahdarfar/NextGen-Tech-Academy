@@ -34,13 +34,13 @@ nextgen-academy video-plan --topic "How humanoid robots are changing manufacturi
 
 You can replace the visual scene descriptions with four `--scene "..." ` arguments.
 
-4. Generate the Persian subtitle file:
+5. Generate the Persian subtitle file:
 
 ```bash
 nextgen-academy subtitles
 ```
 
-5. If Piper is installed and a properly licensed English voice model is downloaded, generate narration locally:
+6. If Piper is installed and a properly licensed English voice model is downloaded, generate narration locally:
 
 ```bash
 nextgen-academy voiceover --model models/piper/your-english-voice.onnx
@@ -48,7 +48,7 @@ nextgen-academy voiceover --model models/piper/your-english-voice.onnx
 
 The model and its matching `.onnx.json` file are both required. Review the model card and commercial-use terms before publishing.
 
-6. Submit only after checking the VidoGrid balance:
+7. Submit only after checking the VidoGrid balance:
 
 ```bash
 nextgen-academy video-submit --confirm-paid-api
@@ -56,19 +56,19 @@ nextgen-academy video-submit --confirm-paid-api
 
 This asks for a second interactive confirmation. Generation may consume credits.
 
-7. Wait for jobs and download the MP4 clips:
+8. Wait for jobs and download the MP4 clips:
 
 ```bash
 nextgen-academy video-download
 ```
 
-8. Generate an editable YouTube metadata package (title options, description template, chapters, tags and thumbnail prompt):
+9. Generate an editable YouTube metadata package (title options, description template, chapters, tags and thumbnail prompt):
 
 ```bash
 nextgen-academy youtube-package
 ```
 
-9. Assemble the video with the Persian subtitle track and narration audio:
+10. Assemble the video with the Persian subtitle track and narration audio:
 
 ```bash
 nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
