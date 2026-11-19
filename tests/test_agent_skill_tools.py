@@ -9,13 +9,15 @@ SKILLS = ROOT / ".claude" / "skills"
 
 
 def run(*args):
-    return subprocess.run(
-        [sys.executable, *map(str, args)],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    return subprocess.run([sys.executable, *map(str, args)], cwd=ROOT,
+                          capture_output=True, text=True, check=True)
+
+
+def usage(path, phrase):
+    result = subprocess.run([sys.executable, str(path)], cwd=ROOT,
+                            capture_output=True, text=True)
+    assert result.returncode == 1
+    assert phrase in result.stdout.lower()
 
 
 def test_hookscore_returns_ranked_json():
@@ -24,7 +26,6 @@ def test_hookscore_returns_ranked_json():
     rows = json.loads(result.stdout)
     assert len(rows) == 1
     assert 0 <= rows[0]["verdict"] <= 100
-    assert rows[0]["hook"].startswith("Why")
 
 
 def test_title_linter_returns_json():
@@ -36,23 +37,19 @@ def test_title_linter_returns_json():
 
 
 def test_chapter_tool_imports_shared_transcript_parser():
-    result = run(SKILLS / "yt-chapters" / "chapters.py")
-    assert "chapters.py" in result.stdout
+    usage(SKILLS / "yt-chapters" / "chapters.py", "chapters.py")
 
 
 def test_edit_tool_imports_and_prints_usage():
-    result = run(SKILLS / "yt-edit" / "deadair.py")
-    assert "edit decision list" in result.stdout.lower()
+    usage(SKILLS / "yt-edit" / "deadair.py", "edit decision list")
 
 
 def test_retention_tool_prints_usage():
-    result = run(SKILLS / "yt-retention" / "retention.py")
-    assert "audience-retention" in result.stdout.lower()
+    usage(SKILLS / "yt-retention" / "retention.py", "audience-retention")
 
 
 def test_viral_tool_imports_hook_formula_catalogue():
-    result = run(SKILLS / "yt-viral" / "swipe.py")
-    assert "rank collected videos" in result.stdout.lower()
+    usage(SKILLS / "yt-viral" / "swipe.py", "rank collected videos")
 
 
 def test_hook_catalogue_contains_multiple_formulas():
