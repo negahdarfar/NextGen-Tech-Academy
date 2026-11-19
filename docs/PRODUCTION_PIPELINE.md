@@ -110,3 +110,24 @@ nextgen-academy documentary-voice --state output/documentary-run.json --chapter 
 ```
 
 This optional stage uses the existing `cloud` extra (`edge-tts`) to create one English MP3 per chapter and a Persian SRT. Subtitle cue times are estimated by Persian sentence length across the measured audio duration; they are **not word-aligned** and must be checked and corrected by a human before assembly. The chapter advances to `narrated` only after both files are written and the audio duration is validated. No video clips are generated or uploaded by this command.
+
+
+## Fully connected long-form stages (chapter workflow)
+
+The chapter pipeline now creates a visual-shot list with each bilingual script. For each chapter, complete the steps in order:
+
+```bash
+nextgen-academy documentary-chapter --state output/documentary-run.json --chapter 1 --output-dir output/documentary
+nextgen-academy documentary-voice --state output/documentary-run.json --chapter 1 --script output/documentary/chapter-01-script.json
+nextgen-academy documentary-visuals --state output/documentary-run.json --chapter 1 --script output/documentary/chapter-01-script.json
+```
+
+The visual stage resumes from its per-chapter asset manifest and records provider, model/source URL, photographer where applicable, clip path and generation status after each shot. `auto` uses Agnes only when its key is configured, then uses Pexels only when its key is configured; no paid fallback is enabled. Agnes clips are 720p and limited to 4–12 seconds. Pexels is stock footage, not generated video. Provider quotas and terms may change.
+
+After every chapter has narration and every visual shot has a valid local clip, assemble:
+
+```bash
+nextgen-academy documentary-assemble --state output/documentary-run.json --output output/documentary/final-documentary.mp4
+```
+
+The assembler synchronizes the visual timeline to measured chapter narration durations, concatenates English audio, offsets Persian subtitle cues, exports 1920×1080/30fps and checks the rendered duration against the blueprint tolerance. This is a technical assembly gate, not factual, translation, copyright, or editorial approval. A human must watch the complete video and review the source/rights ledger before marking chapters reviewed or uploading. The long-form CLI is manually invoked; the one-minute scheduled workflow is not silently repurposed for 15–60-minute jobs.
