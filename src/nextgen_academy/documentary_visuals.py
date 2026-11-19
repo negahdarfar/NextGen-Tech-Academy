@@ -26,7 +26,7 @@ def _save(path: Path, data: dict[str, Any]) -> None:
 def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
                              script_path: str | Path,
                              output_dir: str | Path = "output/documentary/visuals",
-                             provider: str = "auto") -> dict[str, Any]:
+                             provider: str = "auto",\n                             allow_agnes_potential_cost: bool = False) -> dict[str, Any]:
     """Generate/restore each shot; persist provenance after every successful asset."""
     if provider not in {"auto", "agnes", "pexels"}:
         raise ValueError("provider must be auto, agnes or pexels")
