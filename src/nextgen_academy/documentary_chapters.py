@@ -11,13 +11,13 @@ from .research import discover_sources
 
 SYSTEM_PROMPT = """You are a rigorous long-form technology documentary writer.
 Return one JSON object with exactly these keys:
-{"narration_en":"...","subtitle_fa":"...","claims":[{"text":"...","source_ids":["src1"]}]}
+{"narration_en":"...","subtitle_fa":"...","claims":[{"text":"...","source_ids":["src1"]}],"visual_shots":[{"visual_prompt":"..."}]}
 Write a coherent documentary chapter, not a short summary. Aim for the requested spoken-word count.
 The English narration must be natural voiceover prose. The Persian text must faithfully translate
 the complete English narration, not summarize it. Do not invent facts, numbers, dates, quotations,
 or study findings. Every verifiable factual claim must cite one or more supplied source IDs.
 Sources are discovery leads, not independently verified evidence. Clearly qualify uncertainty.
-Do not include headings, markdown fences, or production directions in narration."""
+Do not include headings, markdown fences, or production directions in narration.\nAlso return exactly the requested number of distinct visual_shots. Each visual_prompt must describe a concrete cinematic 16:9 shot, with subject, setting, action, camera movement and continuity. No text overlays, logos, or watermarks."""
 
 
 def process_documentary_chapter(state_path: str | Path, chapter_number: int,
@@ -78,10 +78,10 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         "Source notes (use only these for factual claims):\n"
         + json.dumps(source_notes, ensure_ascii=False)
     )
-    data = generate_json(SYSTEM_PROMPT, user_prompt)
+    clip_seconds = int(chapter.get("visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)))\n    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds\n    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
     narration = str(data.get("narration_en", "")).strip()
     translation = str(data.get("subtitle_fa", "")).strip()
-    claims = data.get("claims")
+    claims = data.get("claims")\n    visual_shots = data.get("visual_shots")
     if not narration or not translation or not isinstance(claims, list):
         raise ValueError("Model output must include narration_en, subtitle_fa and claims.")
     word_count = len(narration.split())
@@ -100,7 +100,7 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         "title": chapter["title"], "duration_seconds": chapter["duration_seconds"],
         "target_narration_words": words, "actual_narration_words": word_count,
         "narration_en": narration, "subtitle_fa": translation,
-        "claims": claims, "sources": sources,
+        "claims": claims, "sources": sources, "visual_shots": visual_shots,\n        "visual_clip_target_seconds": clip_seconds,
         "review_required": True,
     }
     _write_json(script_path, payload)
