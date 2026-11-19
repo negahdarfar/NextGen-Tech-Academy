@@ -23,7 +23,7 @@ Cloud-first automated YouTube documentary production. The workflow runs on GitHu
 ## GitHub Actions setup
 Add repository Actions secrets:
 - `GEMINI_API_KEY` (required for script generation and AI highlight ranking; free-tier quotas apply)
-`PEXELS_API_KEY` (Pexels API key for stock footage search/download)
+- `PEXELS_API_KEY` (Pexels API key for stock footage search/download)
 - `LTX_API_KEY` (optional; only needed to enable LTX-2.5 API generation; paid API)
 - `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with the `youtube.upload` scope; required only when uploading)
 
