@@ -14,6 +14,7 @@ from .video_pipeline import poll_and_download, render_video
 from .video_segments import VideoSegment, build_segments, segments_as_dicts
 from .vidogrid import VidoGridClient, VidoGridSettings
 from .tts import synthesize_storyboard
+from .youtube_package import build_youtube_package
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,6 +65,10 @@ def build_parser() -> argparse.ArgumentParser:
     subs = sub.add_parser("subtitles", help="create timed Persian subtitles from the storyboard")
     subs.add_argument("--manifest", default="output/storyboard.json")
     subs.add_argument("--output", default="output/persian.srt")
+
+    package = sub.add_parser("youtube-package", help="create editable title, description, chapters and tags")
+    package.add_argument("--storyboard", default="output/storyboard.json")
+    package.add_argument("--output", default="output/youtube-package.json")
     return parser
 
 
@@ -135,6 +140,11 @@ def main() -> int:
     if args.command == "subtitles":
         path = storyboard_subtitles(args.manifest, args.output)
         print(f"Created Persian subtitle file: {path}")
+        return 0
+
+    if args.command == "youtube-package":
+        path = build_youtube_package(args.storyboard, args.output)
+        print(f"Created editable YouTube publishing package: {path}")
         return 0
 
     return 2
