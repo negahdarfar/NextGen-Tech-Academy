@@ -99,3 +99,14 @@ nextgen-academy documentary-plan --topic "How AI is changing scientific research
 ```
 
 The planner allocates chapter time, narration word-count targets, and a shot list using 12-second (or shorter) visual slots. It produces a blueprint only: it does not claim to have written or fact-checked the full narration, generated clips, or rendered a documentary. At 12 seconds per slot, a 15-minute episode needs 75 slots, a 30-minute episode 150, and a 60-minute episode 300. This keeps provider limits visible before any media-generation request is made.
+
+
+## Chapter narration and Persian subtitle timing
+
+After a chapter reaches `scripted`, run:
+
+```bash
+nextgen-academy documentary-voice --state output/documentary-run.json --chapter 1 --script output/documentary/chapter-01-script.json
+```
+
+This optional stage uses the existing `cloud` extra (`edge-tts`) to create one English MP3 per chapter and a Persian SRT. Subtitle cue times are estimated by Persian sentence length across the measured audio duration; they are **not word-aligned** and must be checked and corrected by a human before assembly. The chapter advances to `narrated` only after both files are written and the audio duration is validated. No video clips are generated or uploaded by this command.
