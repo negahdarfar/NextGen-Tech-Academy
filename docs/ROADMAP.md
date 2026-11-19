@@ -5,7 +5,7 @@
 - [x] Environment configuration template
 - [x] Plan-only CLI
 - [x] Architecture and specialist-role documentation
-- [ ] CI workflow and baseline test run
+- [x] CI workflow and baseline test run (43 tests passed on the integration branch)
 
 ## Phase 1 — reliable content artifacts
 - [ ] Typed research-source model with URL, publisher, date, and evidence excerpt
