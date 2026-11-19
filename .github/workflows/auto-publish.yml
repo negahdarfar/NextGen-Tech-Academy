@@ -37,12 +37,15 @@ jobs:
     timeout-minutes: 180
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
+      FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
+      FREELLMAPI_MODEL: ${{ vars.FREELLMAPI_MODEL || 'auto' }}
       OMNIROUTE_MODEL: ${{ vars.OMNIROUTE_MODEL || 'gemini/gemini-2.5-flash' }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
-      LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'omniroute,gemini,groq,openrouter' }}
+      LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'freellmapi,omniroute,gemini,groq,openrouter' }}
       AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
       AGNES_BASE_URL: https://apihub.agnes-ai.com/v1
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -55,6 +58,8 @@ jobs:
       - name: Validate required GitHub secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
+          FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
@@ -65,8 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$AGNES_API_KEY$PEXELS_API_KEY" ] || { echo "Configure AGNES_API_KEY (Agnes AI video) or PEXELS_API_KEY (free stock footage)."; exit 1; }
-          if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY" ]; then
-            echo "Configure at least one LLM secret: GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY."
+          if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY$FREELLMAPI_CLOUD_BASE_URL$FREELLMAPI_CLOUD_API_KEY" ]; then
+            echo "Configure at least one LLM provider: FREELLMAPI_CLOUD_BASE_URL + FREELLMAPI_CLOUD_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY."
             exit 1
           fi
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] || [ "$INPUT_UPLOAD" != "false" ]; then
@@ -75,6 +80,7 @@ jobs:
           echo "Credential presence (values never shown):"
           [ -n "$AGNES_API_KEY" ] && echo "AGNES_API_KEY: present" || echo "AGNES_API_KEY: missing"
           [ -n "$GEMINI_API_KEY" ] && echo "GEMINI_API_KEY: present" || echo "GEMINI_API_KEY: missing"
+          if [ -n "$FREELLMAPI_CLOUD_BASE_URL" ] && [ -n "$FREELLMAPI_CLOUD_API_KEY" ]; then echo "FREELLMAPI cloud pair: present"; else echo "FREELLMAPI cloud pair: missing"; fi
           [ -n "$GROQ_API_KEY" ] && echo "GROQ_API_KEY: present" || echo "GROQ_API_KEY: missing"
           [ -n "$OPENROUTER_API_KEY" ] && echo "OPENROUTER_API_KEY: present" || echo "OPENROUTER_API_KEY: missing"
           [ -n "$YOUTUBE_TOKEN_JSON" ] && echo "YOUTUBE_TOKEN_JSON: present" || echo "YOUTUBE_TOKEN_JSON: missing"
