@@ -4,7 +4,7 @@ An open-source foundation for an AI-assisted YouTube education production workfl
 
 ## Current status
 
-The project now includes a first VidoGrid integration layer for planning ordered 15-second-target clip prompts and submitting jobs sequentially through the official API. It is not yet a complete unattended video factory: automatic result downloads, reference-frame continuity, FFmpeg assembly, final QA, and YouTube publishing remain future work.
+The project now includes a first VidoGrid integration layer for planning ordered 15-second clip prompts and submitting jobs sequentially through the official API. The default model route is Grok Imagine Video 1.5 Lite. This is not yet a complete unattended video factory: automatic result downloads, visual reference-frame chaining, FFmpeg assembly, final QA, and YouTube publishing remain future work.
 
 ## Goals
 
