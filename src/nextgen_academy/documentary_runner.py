@@ -41,6 +41,8 @@ def produce_documentary(topic: str, minutes: int = 15,
         save_documentary_plan(plan, plan_file)
         initialize_documentary_run(plan_file, state_file)
     state = load_run_state(state_file)
+    if int(state.get("target_duration_seconds") or 0) != minutes * 60:
+        raise DocumentaryRunError("The requested minutes do not match the existing run. Resume with the original duration.")
     if topic.strip() and state.get("topic") != topic.strip():
         raise DocumentaryRunError("The supplied topic does not match the existing run manifest.")
     if int(state.get("target_duration_seconds") or 0) not in (900, 1800, 3600):
@@ -50,7 +52,7 @@ def produce_documentary(topic: str, minutes: int = 15,
     for snapshot in state["chapters"]:
         number = int(snapshot["chapter"])
         try:
-            current = load_run_state(state_file)["chapters"][number - 1]["status"]
+            current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
             script_file = root / f"chapter-{number:02d}-script.json"
             if current in {"planned", "researched"}:
                 process_documentary_chapter(state_file, number, root)
@@ -66,7 +68,7 @@ def produce_documentary(topic: str, minutes: int = 15,
                 )
             elif current == "reviewed":
                 # Reviewed chapters must already retain their generated assets.
-                outputs = load_run_state(state_file)["chapters"][number - 1].get("outputs", {})
+                outputs = next(item.get("outputs", {}) for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
                 if not all(outputs.get(key) and Path(outputs[key]).is_file()
                            for key in ("narration_audio", "persian_subtitles", "visual_manifest")):
                     raise DocumentaryRunError(
