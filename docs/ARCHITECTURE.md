@@ -2,7 +2,7 @@
 
 ## Design principle
 
-Each production stage is an independent component with explicit inputs and outputs. Provider integrations must be replaceable, testable, and disabled unless configured. The initial implementation is deliberately plan-only.
+Each production stage is an independent component with explicit inputs and outputs. Provider integrations must be replaceable, testable, and disabled unless configured.
 
 ## Proposed pipeline
 
@@ -11,12 +11,13 @@ Each production stage is an independent component with explicit inputs and outpu
 3. **Fact review** — flag unsupported claims, conflicts, and uncertainty.
 4. **Script** — create an English narration script with a target duration and audience.
 5. **Localization** — produce Persian subtitles and validate timing/encoding.
-6. **Visual planning** — map narration sections to footage, diagrams, and generated assets.
-7. **Asset acquisition** — use licensed/openly usable media or generated visuals; preserve provenance.
-8. **Rendering** — assemble audio, visuals, captions, and transitions.
-9. **Quality assurance** — inspect duration, audio levels, subtitle sync, factual claims, and rights.
-10. **YouTube packaging** — prepare metadata, chapters, thumbnail, and visibility settings.
-11. **Publishing** — future module; requires OAuth, explicit channel authorization, quota/error handling, and approval.
+6. **Visual planning** — map narration sections to a storyboard and ordered shots.
+7. **Prompt continuity** — apply a shared visual bible and carry scene, subject, lighting, and camera continuity between clips.
+8. **VidoGrid generation** — submit clip jobs sequentially, persist every accepted job UUID, and recover from interruptions.
+9. **Asset retrieval and rendering** — retrieve completed clips, validate actual duration, and assemble in storyboard order with FFmpeg.
+10. **Quality assurance** — inspect duration, audio levels, subtitle sync, factual claims, and rights.
+11. **YouTube packaging** — prepare metadata, chapters, thumbnail, and visibility settings.
+12. **Publishing** — future module; requires OAuth, explicit channel authorization, quota/error handling, and approval.
 
 ## Provider boundaries
 
@@ -24,16 +25,18 @@ Each production stage is an independent component with explicit inputs and outpu
 - Language model provider: accepts structured prompts and returns typed content.
 - Speech provider: returns audio plus metadata such as duration and voice settings.
 - Media provider: returns assets with license/provenance metadata.
-- Renderer: consumes a timeline and produces a local video file.
+- VidoGrid adapter: checks account credits, submits a prompt, and polls a job UUID.
+- Renderer: consumes a local timeline and produces a video file.
 - YouTube publisher: must be isolated and disabled by default.
 
 ## Local-first strategy
 
-Use local tools when they meet quality and performance needs. Ollama is an optional local language-model endpoint. The default configuration points to localhost, but the current foundation does not make network calls to it.
+Use local tools when they meet quality and performance needs. Ollama is an optional local language-model endpoint. VidoGrid is an optional remote generation provider; its API may consume credits and is never called by the planning command.
 
 ## Reliability
 
 - Persist intermediate artifacts so a failed stage can resume.
 - Make stages idempotent where possible.
 - Record provider, model, prompt version, source URLs, and asset licenses.
+- Do not assume mobile-app free quotas apply to API usage.
 - Never publish automatically until a separate approval gate is implemented.
