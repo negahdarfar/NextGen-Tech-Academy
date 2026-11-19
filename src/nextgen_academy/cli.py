@@ -85,6 +85,8 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--storyboard", default="output/storyboard.json")
     review.add_argument("--output", default="output/script-review.json")
 
+    account = sub.add_parser("vidogrid-account", help="inspect VidoGrid account and credit response without generating")
+
     auto = sub.add_parser("auto-run", help="run cloud production without Ollama")
     auto.add_argument("--topic", default="", help="leave blank for automatic RSS topic discovery")
     auto.add_argument("--output-dir", default="output")
@@ -200,6 +202,11 @@ def main() -> int:
         report = write_review_report(args.storyboard, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 1
+
+    if args.command == "vidogrid-account":
+        client = VidoGridClient(VidoGridSettings.from_env())
+        print(json.dumps(client.account(), ensure_ascii=False, indent=2))
+        return 0
 
     if args.command == "auto-run":
         from .automation import run_automated
