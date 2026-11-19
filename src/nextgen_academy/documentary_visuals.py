@@ -1,6 +1,7 @@
 """Resumable chapter visual generation with explicit free-provider routing."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -59,13 +60,16 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     manifest_path = root / f"chapter-{chapter_number:02d}-assets.json"
+    script_hash = hashlib.sha256(script_file.read_bytes()).hexdigest()
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if manifest.get("chapter") != chapter_number or manifest.get("script_path") != str(script_file):
+        if (manifest.get("chapter") != chapter_number or manifest.get("script_path") != str(script_file)
+                or manifest.get("script_sha256") != script_hash):
             raise DocumentaryVisualError("Existing asset manifest belongs to a different script; use a new output directory.")
     else:
         manifest = {"chapter": chapter_number, "script_path": str(script_file),
-                    "clip_target_seconds": clip_seconds, "status": "in_progress", "shots": []}
+                    "clip_target_seconds": clip_seconds, "script_sha256": script_hash,
+                    "status": "in_progress", "shots": []}
     completed = {int(item["shot"]): item for item in manifest["shots"]
                  if item.get("status") == "downloaded" and
                  Path(item.get("local_path", "")).is_file() and
