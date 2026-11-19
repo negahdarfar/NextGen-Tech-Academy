@@ -51,6 +51,22 @@ Add credentials to the process environment or a local, ignored `.env` file. Neve
 
 See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorization and secure GitHub secret configuration.
 
+## OmniRoute integration (optional AI gateway)
+
+The LLM adapter can route script-generation requests through a self-hosted OmniRoute instance. This keeps the existing Gemini/Groq/OpenRouter adapters available as fallbacks and does not change the video-generation or YouTube-upload stages.
+
+Add these GitHub Actions **Secrets** (never commit them):
+- `OMNIROUTE_BASE_URL` — public HTTPS base URL reachable from the GitHub-hosted runner, ending in `/v1` (for example, `https://ai-gateway.example.com/v1`). `localhost` and `127.0.0.1` will not work from GitHub-hosted runners.
+- `OMNIROUTE_API_KEY` — an API key created in OmniRoute Dashboard → Endpoints.
+
+Optional GitHub Actions **Variables**:
+- `OMNIROUTE_MODEL` — defaults to `auto/subscription` (subscription-quota-only routing; it should fail closed rather than silently falling back to billable providers).
+- `LLM_PROVIDER_ORDER` — defaults to `omniroute,gemini,groq,openrouter`. Put or remove providers to change fallback order.
+
+Connect at least one eligible provider in OmniRoute Dashboard → Providers, then create an endpoint key in Dashboard → Endpoints. For the no-surprise-cost default, use `auto/subscription` and confirm the connected provider's terms and quota. Do not use `auto`, `auto/cheap`, or a paid model unless you intentionally accept possible charges. OmniRoute does not grant free credits; provider free tiers, eligibility, regional access, and limits are controlled by each provider.
+
+See [OmniRoute setup and security notes](docs/OMNIROUTE_SETUP.md). If OmniRoute is unavailable, the existing LLM fallback chain continues to Gemini, Groq, and OpenRouter according to `LLM_PROVIDER_ORDER`.
+
 ## YouTube publishing safeguards
 
 - OAuth refresh-token credentials are required; an API key alone cannot upload to a personal channel.
