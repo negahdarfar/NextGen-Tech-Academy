@@ -1,0 +1,28 @@
+from nextgen_academy.cli import build_parser
+
+
+def test_video_plan_parser_has_single_storyboard_argument():
+    args = build_parser().parse_args([
+        "video-plan", "--topic", "robotics", "--storyboard", "draft.json"
+    ])
+    assert args.storyboard == "draft.json"
+    assert args.scene is None
+
+
+def test_local_draft_command_defaults_to_small_ollama_model():
+    args = build_parser().parse_args(["draft-script", "--topic", "robotics"])
+    assert args.model == "qwen2.5:3b"
+    assert args.output == "output/storyboard.json"
+
+
+
+def test_auto_run_command_is_available_without_ollama():
+    args = build_parser().parse_args(["auto-run", "--topic", "robotics", "--upload"])
+    assert args.command == "auto-run"
+    assert args.topic == "robotics"
+    assert args.upload is True
+
+
+def test_vidogrid_account_command_does_not_require_generation_flags():
+    args = build_parser().parse_args(["vidogrid-account"])
+    assert args.command == "vidogrid-account"
