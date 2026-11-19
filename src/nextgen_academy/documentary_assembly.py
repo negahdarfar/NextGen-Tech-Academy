@@ -120,7 +120,8 @@ def assemble_documentary_run(state_path: str | Path,
             clip_duration = chapter_duration / len(shots)
             normalized_audio = work / f"audio-{chapter['chapter']:02d}.wav"
             _run([ffmpeg, "-y", "-i", str(audio), "-vn", "-ac", "2", "-ar", "48000",
-                  "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",\n                  "-c:a", "pcm_s16le", str(normalized_audio)])
+                  "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+                  "-c:a", "pcm_s16le", str(normalized_audio)])
             audio_files.append(normalized_audio)
             for shot_index, shot in enumerate(shots, 1):
                 clip = Path(shot["local_path"])
@@ -158,7 +159,8 @@ def assemble_documentary_run(state_path: str | Path,
         _run([ffmpeg, "-y", "-i", str(silent), "-i", str(full_audio), "-i", str(srt),
               "-map", "0:v:0", "-map", "1:a:0", "-map", "2:0",
               "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-              "-c:s", "mov_text", "-metadata:s:s:0", "language=fas",\n              "-metadata:s:s:0", "title=Persian", "-movflags", "+faststart", "-shortest", str(temp_output)])
+              "-c:s", "mov_text", "-metadata:s:s:0", "language=fas",
+              "-metadata:s:s:0", "title=Persian", "-movflags", "+faststart", "-shortest", str(temp_output)])
 
     try:
         if not temp_output.is_file() or temp_output.stat().st_size < 1024:
