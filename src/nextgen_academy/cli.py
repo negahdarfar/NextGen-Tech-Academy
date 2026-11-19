@@ -16,6 +16,7 @@ from .vidogrid import VidoGridClient, VidoGridSettings
 from .tts import synthesize_storyboard
 from .youtube_package import build_youtube_package
 from .script_review import write_review_report
+from .ollama_writer import draft_storyboard
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,6 +33,13 @@ def build_parser() -> argparse.ArgumentParser:
     storyboard = sub.add_parser("storyboard", help="create a four-scene, one-minute storyboard")
     storyboard.add_argument("--topic", required=True)
     storyboard.add_argument("--output", default="output/storyboard.json")
+
+    draft = sub.add_parser("draft-script", help="draft English narration and Persian subtitles using local Ollama")
+    draft.add_argument("--topic", required=True)
+    draft.add_argument("--output", default="output/storyboard.json")
+    draft.add_argument("--ollama-url", default="http://127.0.0.1:11434")
+    draft.add_argument("--model", default="qwen2.5:3b")
+    draft.add_argument("--timeout", type=int, default=180)
 
     clips = sub.add_parser("video-plan", help="create four linked 15-second clip prompts")
     clips.add_argument("--topic", required=True)
@@ -91,6 +99,11 @@ def main() -> int:
     if args.command == "storyboard":
         path = save_script_package(args.topic, default_storyboard(args.topic), args.output)
         print(f"Created four-scene / 60-second storyboard: {path}")
+        return 0
+
+    if args.command == "draft-script":
+        path = draft_storyboard(args.topic, args.output, args.ollama_url, args.model, args.timeout)
+        print(f"Created bilingual AI draft (not fact-checked): {path}")
         return 0
 
     if args.command == "video-plan":
