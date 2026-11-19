@@ -24,15 +24,15 @@ Copy `.env.example` to `.env` and add your VidoGrid API key locally. Never commi
 nextgen-academy storyboard --topic "How humanoid robots are changing manufacturing"
 ```
 
-2. Create four linked visual prompts (no API charge):
+2. Open `output/storyboard.json` and fill all four `narration_en` and `subtitle_fa` fields. The English narration must be fact-checked and the Persian text must be its faithful translation. The code does not invent or fact-check documentary claims.
+
+3. Create four linked visual prompts (no API charge). The command reads your edited storyboard, including narration and subtitle fields:
 
 ```bash
 nextgen-academy video-plan --topic "How humanoid robots are changing manufacturing"
 ```
 
-You can replace the default scene descriptions with four `--scene "..." ` arguments.
-
-3. Open `output/storyboard.json` and fill all four `narration_en` and `subtitle_fa` fields. The English narration must be fact-checked and the Persian text must be its faithful translation. The code does not invent or fact-check documentary claims.
+You can replace the visual scene descriptions with four `--scene "..." ` arguments.
 
 4. Generate the Persian subtitle file:
 
