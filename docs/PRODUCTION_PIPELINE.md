@@ -29,7 +29,7 @@ When no topic is supplied, RSS headlines are used to choose a topic. The automat
 
 - `AGNES_API_KEY` — optional AI video key. Free 720p promotion is limited-time and may change.
 - `PEXELS_API_KEY` — optional free stock fallback. Recommended alongside Agnes.
-- At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY` for cloud writing.
+- At least one LLM route: the optional `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` pair, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY` for cloud writing.
 - `YOUTUBE_TOKEN_JSON` for OAuth upload with the `youtube.upload` scope.
 
 At least one of `AGNES_API_KEY` or `PEXELS_API_KEY` is required for visual scenes. Never commit credentials.
