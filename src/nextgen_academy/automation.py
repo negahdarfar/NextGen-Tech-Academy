@@ -71,7 +71,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
     return result
 
 
-class _VidoGridRouter:
+def _require_free_credit_budget(account: dict, clips: int) -> None:\n    """Fail closed unless the API exposes a separate free-credit balance."""\n    free_keys = {"free_credits", "free_balance", "bonus_credits", "trial_credits", "promotional_credits"}\n    found = []\n    def walk(value):\n        if isinstance(value, dict):\n            for key, item in value.items():\n                if key.lower() in free_keys and isinstance(item, (int, float)):\n                    found.append(float(item))\n                walk(item)\n        elif isinstance(value, list):\n            for item in value:\n                walk(item)\n    walk(account)\n    if not found:\n        raise RuntimeError("VidoGrid did not expose a separate free/trial credit balance; no generation jobs were submitted.")\n    try:\n        per_clip = float(os.environ["VIDOGRID_CREDITS_PER_CLIP"])\n    except (KeyError, ValueError) as exc:\n        raise RuntimeError("Set VIDOGRID_CREDITS_PER_CLIP from current pricing for the selected models; costs are not guessed.") from exc\n    if per_clip <= 0:\n        raise RuntimeError("VIDOGRID_CREDITS_PER_CLIP must be greater than zero.")\n    required = per_clip * clips\n    available = min(found)\n    if available < required:\n        raise RuntimeError(f"Insufficient free VidoGrid credits: available={available}, estimated_required={required}. No jobs were submitted.")\n\n\nclass _VidoGridRouter:
     """Select a configured model for each clip while preserving ordered job manifests."""
     def __init__(self):
         self.models = [m.strip() for m in os.getenv(
