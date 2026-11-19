@@ -18,17 +18,32 @@ class DocumentaryRunError(RuntimeError):
     pass
 
 
-def produce_documentary(topic: str, minutes: int = 15,
-                        state_path: str | Path = "output/documentary-run.json",
-                        output_dir: str | Path = "output/documentary",
-                        provider: str = "auto", voice: str = "en-US-AriaNeural",
-                        confirm_provider_requests: bool = False,\n                        allow_agnes_potential_cost: bool = False) -> dict[str, Any]:
+def _chapter(state_path: Path, number: int) -> dict[str, Any]:
+    state = load_run_state(state_path)
+    return next(item for item in state["chapters"] if int(item["chapter"]) == number)
+
+
+def produce_documentary(
+    topic: str,
+    minutes: int = 15,
+    state_path: str | Path = "output/documentary-run.json",
+    output_dir: str | Path = "output/documentary",
+    provider: str = "auto",
+    voice: str = "en-US-AriaNeural",
+    confirm_provider_requests: bool = False,
+    allow_agnes_potential_cost: bool = False,
+) -> dict[str, Any]:
     """Run research → script → TTS/SRT → resumable visuals → assembly; never upload."""
+    if provider == "agnes" and not allow_agnes_potential_cost:
+        raise DocumentaryRunError(
+            "Agnes may be chargeable if its temporary promotion has ended; check pricing and explicitly enable the separate cost confirmation."
+        )
     if not confirm_provider_requests:
         raise DocumentaryRunError(
             "External LLM, TTS and visual-provider requests require --confirm-provider-requests. "
             "No provider request was sent."
         )
+
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     state_file = Path(state_path)
@@ -40,6 +55,7 @@ def produce_documentary(topic: str, minutes: int = 15,
         plan_file = root / "documentary-plan.json"
         save_documentary_plan(plan, plan_file)
         initialize_documentary_run(plan_file, state_file)
+
     state = load_run_state(state_file)
     if int(state.get("target_duration_seconds") or 0) != minutes * 60:
         raise DocumentaryRunError("The requested minutes do not match the existing run. Resume with the original duration.")
@@ -52,25 +68,31 @@ def produce_documentary(topic: str, minutes: int = 15,
     for snapshot in state["chapters"]:
         number = int(snapshot["chapter"])
         try:
-            current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
+            current = _chapter(state_file, number)["status"]
             script_file = root / f"chapter-{number:02d}-script.json"
             if current in {"planned", "researched"}:
                 process_documentary_chapter(state_file, number, root)
-                current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
+                current = _chapter(state_file, number)["status"]
             if current == "scripted":
                 synthesize_documentary_chapter(
                     state_file, number, script_file, root / "media", voice
                 )
-                current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
+                current = _chapter(state_file, number)["status"]
             if current in {"narrated", "assembled"}:
                 generate_chapter_visuals(
-                    state_file, number, script_file, root / "visuals", provider
+                    state_file,
+                    number,
+                    script_file,
+                    root / "visuals",
+                    provider,
+                    allow_agnes_potential_cost=allow_agnes_potential_cost,
                 )
             elif current == "reviewed":
-                # Reviewed chapters must already retain their generated assets.
-                outputs = next(item.get("outputs", {}) for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
-                if not all(outputs.get(key) and Path(outputs[key]).is_file()
-                           for key in ("narration_audio", "persian_subtitles", "visual_manifest")):
+                outputs = _chapter(state_file, number).get("outputs", {})
+                if not all(
+                    outputs.get(key) and Path(outputs[key]).is_file()
+                    for key in ("narration_audio", "persian_subtitles", "visual_manifest")
+                ):
                     raise DocumentaryRunError(
                         f"Reviewed chapter {number} is missing one or more production assets."
                     )
@@ -82,7 +104,11 @@ def produce_documentary(topic: str, minutes: int = 15,
             ) from exc
 
     result = assemble_documentary_run(state_file, root / "final-documentary.mp4")
-    result.update({"topic": state["topic"], "completed_chapters": completed,
-                   "state_path": str(state_file), "upload_performed": False,
-                   "public_upload": False})
+    result.update({
+        "topic": state["topic"],
+        "completed_chapters": completed,
+        "state_path": str(state_file),
+        "upload_performed": False,
+        "public_upload": False,
+    })
     return result
