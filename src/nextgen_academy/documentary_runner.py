@@ -4,6 +4,7 @@ No YouTube upload is performed by this command.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,23 @@ def produce_documentary(
         raise DocumentaryRunError(
             "Agnes may be chargeable if its temporary promotion has ended; check pricing and explicitly enable the separate cost confirmation."
         )
+    if provider not in {"auto", "agnes", "pexels"}:
+        raise DocumentaryRunError("Provider must be auto, pexels, or agnes.")
+    if provider in {"auto", "pexels"} and not os.getenv("PEXELS_API_KEY", "").strip():
+        raise DocumentaryRunError("Zero-budget auto/Pexels mode requires PEXELS_API_KEY; no LLM or TTS request was sent.")
+    if provider == "agnes" and not os.getenv("AGNES_API_KEY", "").strip():
+        raise DocumentaryRunError("AGNES_API_KEY is missing; no external request was sent.")
+    free_llm_ready = (
+        bool(os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip())
+        and bool(os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip())
+    ) or (
+        bool(os.getenv("OPENROUTER_API_KEY", "").strip())
+        and os.getenv("OPENROUTER_MODEL", "").strip().endswith(":free")
+    )
+    if not free_llm_ready:
+        raise DocumentaryRunError("Zero-budget mode requires the FreeLLMAPI cloud pair or an OpenRouter model ending in :free; no external request was sent.")
+    os.environ["LLM_PROVIDER_ORDER"] = "freellmapi,openrouter"
+    os.environ["ALLOW_PAID_LLM"] = "false"
     if not confirm_provider_requests:
         raise DocumentaryRunError(
             "External LLM, TTS and visual-provider requests require --confirm-provider-requests. "
