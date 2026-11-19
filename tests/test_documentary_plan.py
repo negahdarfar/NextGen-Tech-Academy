@@ -1,17 +1,22 @@
 import json
+import math
 
 import pytest
 
 from nextgen_academy.documentary_plan import build_documentary_plan, save_documentary_plan
 
 
-@pytest.mark.parametrize(("minutes", "slots"), [(15, 75), (30, 150), (60, 300)])
+@pytest.mark.parametrize(("minutes", "slots"), [(15, 78), (30, 153), (60, 303)])
 def test_long_form_plan_has_exact_duration_and_visual_slots(minutes, slots):
     plan = build_documentary_plan("AI in science", minutes=minutes)
     assert plan["target_duration_seconds"] == minutes * 60
     assert plan["required_visual_slots"] == slots
     assert plan["shots"][-1]["start_seconds"] + plan["shots"][-1]["duration_seconds"] == minutes * 60
     assert sum(ch["duration_seconds"] for ch in plan["chapters"]) == minutes * 60
+    for chapter in plan["chapters"]:
+        chapter_shots = [shot for shot in plan["shots"] if shot["chapter"] == chapter["chapter"]]
+        assert len(chapter_shots) == math.ceil(chapter["duration_seconds"] / 12)
+        assert sum(shot["duration_seconds"] for shot in chapter_shots) == chapter["duration_seconds"]
     assert plan["pipeline_status"] == "blueprint_only"
 
 
