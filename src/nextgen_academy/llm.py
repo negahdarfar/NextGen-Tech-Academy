@@ -1,0 +1,81 @@
+"""Cloud LLM adapters with provider fallback; no local Ollama dependency."""
+from __future__ import annotations
+
+import json
+import os
+import urllib.parse
+import urllib.request
+from typing import Any
+
+
+class LLMError(RuntimeError):
+    pass
+
+
+def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
+    order = [p.strip().lower() for p in os.getenv("LLM_PROVIDER_ORDER", "gemini,groq,openrouter").split(",") if p.strip()]
+    failures: list[str] = []
+    for provider in order:
+        try:
+            if provider == "gemini" and os.getenv("GEMINI_API_KEY"):
+                raw = _gemini(system_prompt, user_prompt)
+            elif provider == "groq" and os.getenv("GROQ_API_KEY"):
+                raw = _openai_compatible("https://api.groq.com/openai/v1/chat/completions",
+                                         os.environ["GROQ_API_KEY"],
+                                         os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                                         system_prompt, user_prompt)
+            elif provider == "openrouter" and os.getenv("OPENROUTER_API_KEY"):
+                raw = _openai_compatible("https://openrouter.ai/api/v1/chat/completions",
+                                         os.environ["OPENROUTER_API_KEY"],
+                                         os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+                                         system_prompt, user_prompt)
+            else:
+                continue
+            return _parse_json(raw)
+        except Exception as exc:
+            failures.append(f"{provider}: {str(exc)[:300]}")
+    if not failures:
+        raise LLMError("No cloud LLM provider is configured. Add GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
+    raise LLMError("All configured LLM providers failed: " + " | ".join(failures))
+
+
+def _post(url: str, payload: dict[str, Any], headers: dict[str, str], timeout: int = 120) -> dict[str, Any]:
+    request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                     headers={**headers, "Content-Type": "application/json"},
+                                     method="POST")
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _gemini(system_prompt: str, user_prompt: str) -> str:
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    key = urllib.parse.quote(os.environ["GEMINI_API_KEY"], safe="")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    payload = {"systemInstruction": {"parts": [{"text": system_prompt}]},
+               "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+               "generationConfig": {"responseMimeType": "application/json", "temperature": 0.35}}
+    data = _post(url, payload, {}, timeout=180)
+    return data["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def _openai_compatible(url: str, key: str, model: str,
+                       system_prompt: str, user_prompt: str) -> str:
+    data = _post(url, {"model": model, "temperature": 0.35,
+                       "response_format": {"type": "json_object"},
+                       "messages": [{"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt}]},
+                 {"Authorization": f"Bearer {key}"}, timeout=180)
+    return data["choices"][0]["message"]["content"]
+
+
+def _parse_json(raw: str) -> dict[str, Any]:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise LLMError("Provider did not return valid JSON") from exc
+    if not isinstance(data, dict):
+        raise LLMError("Provider JSON root must be an object")
+    return data
