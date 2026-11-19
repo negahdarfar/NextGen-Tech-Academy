@@ -17,7 +17,7 @@ def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
     failures: list[str] = []
     for provider in order:
         try:
-            if provider == "omniroute" and os.getenv("OMNIROUTE_API_KEY"):
+            if provider == "omniroute" and os.getenv("OMNIROUTE_BASE_URL"):
                 raw = _omniroute(system_prompt, user_prompt)
             elif provider == "gemini" and os.getenv("GEMINI_API_KEY"):
                 raw = _gemini(system_prompt, user_prompt)
@@ -66,14 +66,17 @@ def _omniroute(system_prompt: str, user_prompt: str) -> str:
         url = base_url + "/chat/completions"
     else:
         url = base_url + "/v1/chat/completions"
-    model = os.getenv("OMNIROUTE_MODEL", "auto/subscription").strip()
+    model = os.getenv("OMNIROUTE_MODEL", "gemini/gemini-2.5-flash").strip()
     if not model:
         raise LLMError("OMNIROUTE_MODEL must not be empty")
+    headers = {}
+    if os.getenv("OMNIROUTE_API_KEY"):
+        headers["Authorization"] = "Bearer " + os.environ["OMNIROUTE_API_KEY"]
     data = _post(url, {"model": model, "temperature": 0.35,
                        "response_format": {"type": "json_object"},
                        "messages": [{"role": "system", "content": system_prompt},
                                     {"role": "user", "content": user_prompt}]},
-                 {"Authorization": "Bearer " + os.environ["OMNIROUTE_API_KEY"]}, timeout=180)
+                 headers, timeout=180)
     return data["choices"][0]["message"]["content"]
 
 def _gemini(system_prompt: str, user_prompt: str) -> str:
