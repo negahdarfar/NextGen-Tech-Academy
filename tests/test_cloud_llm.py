@@ -32,7 +32,7 @@ def test_openrouter_paid_model_is_blocked_by_default(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
     monkeypatch.setenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
     monkeypatch.delenv("ALLOW_PAID_LLM", raising=False)
-    with pytest.raises(LLMError, match="All configured cloud LLM providers failed"):
+    with pytest.raises(LLMError, match="All configured LLM providers failed"):
         generate_json("system", "user")
 
 
