@@ -22,14 +22,19 @@ on:
         default: false
         type: boolean
       visual_provider:
-        description: "Visual provider routing"
+        description: "Pexels is zero-budget default; Agnes may be chargeable"
         required: true
         default: auto
         type: choice
         options:
           - auto
-          - agnes
           - pexels
+          - agnes
+      allow_agnes_potential_cost:
+        description: "Separate acknowledgement of possible Agnes charges"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -47,8 +52,6 @@ jobs:
       FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
       FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
       FREELLMAPI_MODEL: ${{ vars.FREELLMAPI_MODEL || 'auto' }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
@@ -60,19 +63,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate free-route credentials without exposing values
+      - name: Validate zero-budget credentials and explicit cost acknowledgements
         shell: bash
+        env:
+          INPUT_VISUAL_PROVIDER: ${{ inputs.visual_provider }}
+          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
         run: |
           set -euo pipefail
-          if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY" ] && { [ -z "$FREELLMAPI_CLOUD_BASE_URL" ] || [ -z "$FREELLMAPI_CLOUD_API_KEY" ]; }; then
-            echo "No LLM credential detected. Configure FreeLLMAPI, Gemini, Groq, or OpenRouter :free."
+          if { [ -z "$FREELLMAPI_CLOUD_BASE_URL" ] || [ -z "$FREELLMAPI_CLOUD_API_KEY" ]; } && { [ -z "$OPENROUTER_API_KEY" ] || [[ "$OPENROUTER_MODEL" != *:free ]]; }; then
+            echo "Zero-budget mode requires the FreeLLMAPI cloud pair or an OpenRouter model explicitly ending in :free."
             exit 1
           fi
-          if [ "$INPUT_VISUAL_PROVIDER" = "agnes" ] && [ -z "$AGNES_API_KEY" ]; then echo "AGNES_API_KEY missing"; exit 1; fi
-          if [ "$INPUT_VISUAL_PROVIDER" = "pexels" ] && [ -z "$PEXELS_API_KEY" ]; then echo "PEXELS_API_KEY missing"; exit 1; fi
-          if [ "$INPUT_VISUAL_PROVIDER" = "auto" ] && [ -z "$AGNES_API_KEY$PEXELS_API_KEY" ]; then echo "Configure AGNES_API_KEY or PEXELS_API_KEY"; exit 1; fi
-        env:
-          INPUT_VISUAL_PROVIDER: ${{ inputs.visual_provider }}\n          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
+          if [ "$INPUT_VISUAL_PROVIDER" = "agnes" ]; then
+            [ -n "$AGNES_API_KEY" ] || { echo "AGNES_API_KEY missing"; exit 1; }
+            [ "$INPUT_ALLOW_AGNES_COST" = "true" ] || { echo "Agnes potential-cost acknowledgement is required."; exit 1; }
+          else
+            [ -n "$PEXELS_API_KEY" ] || { echo "Auto/Pexels zero-budget mode requires PEXELS_API_KEY."; exit 1; }
+          fi
       - name: Install FFmpeg
         run: |
           sudo apt-get update
@@ -83,10 +90,13 @@ jobs:
         env:
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_MINUTES: ${{ inputs.minutes }}
-          INPUT_PROVIDER: ${{ inputs.visual_provider }}\n          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
+          INPUT_PROVIDER: ${{ inputs.visual_provider }}
+          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
         run: |
           set -euo pipefail
-          nextgen-academy documentary-produce --topic "$INPUT_TOPIC" --minutes "$INPUT_MINUTES" --state output/documentary-run.json --output-dir output/documentary --provider "$INPUT_PROVIDER" --confirm-provider-requests \\\n            $([ "$INPUT_ALLOW_AGNES_COST" = "true" ] && echo "--allow-agnes-potential-cost")
+          EXTRA_ARGS=()
+          if [ "$INPUT_ALLOW_AGNES_COST" = "true" ]; then EXTRA_ARGS+=(--allow-agnes-potential-cost); fi
+          nextgen-academy documentary-produce --topic "$INPUT_TOPIC" --minutes "$INPUT_MINUTES" --state output/documentary-run.json --output-dir output/documentary --provider "$INPUT_PROVIDER" --confirm-provider-requests "${EXTRA_ARGS[@]}"
       - name: Preserve resumable state and production assets
         if: always()
         uses: actions/upload-artifact@v4
