@@ -14,7 +14,7 @@ Open **Actions → Automated YouTube documentary factory → Run workflow** or u
 6. Validate the rendered duration against the requested 3-10 minute target.
 7. Generate YouTube title, description, tags, chapters and thumbnail prompt.
 8. Run the pinned MIT-licensed local highlight extractor on the completed MP4. Faster-Whisper transcribes the English narration, Gemini ranks engaging moments, and FFmpeg/OpenCV renders 3, 5 or 8 vertical MP4 clips.
-9. Preserve all production files as an Actions artifact. Manual master upload is optional and private-only; scheduled master uploads are private. Shorts are artifacts only, not auto-published.
+9. Preserve all production files as an Actions artifact. Manual master upload is optional and private-only; scheduled master uploads are private when YouTube OAuth is configured. Shorts are artifacts only, not auto-published.
 
 ## Required GitHub Actions secrets
 
