@@ -65,7 +65,11 @@ jobs:
         run: |
           UPLOAD=""
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-            UPLOAD="--upload"
+            if [ -n "${YOUTUBE_TOKEN_JSON}" ]; then
+              UPLOAD="--upload"
+            else
+              echo "::warning::YOUTUBE_TOKEN_JSON is not configured; producing the documentary without YouTube upload."
+            fi
           elif [ "${INPUT_UPLOAD}" = "true" ]; then
             UPLOAD="--upload"
           fi
