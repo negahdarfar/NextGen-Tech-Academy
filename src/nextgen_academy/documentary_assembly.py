@@ -69,9 +69,6 @@ def _parse_srt(path: Path, offset: float, start_index: int) -> tuple[list[str], 
 def assemble_documentary_run(state_path: str | Path,
                               output_file: str | Path = "output/documentary/final-documentary.mp4") -> dict[str, Any]:
     state = load_run_state(state_path)
-    ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
-    if not ffmpeg or not ffprobe:
-        raise DocumentaryAssemblyError("FFmpeg and ffprobe are required.")
     if not state.get("chapters"):
         raise DocumentaryAssemblyError("Run has no chapters.")
     chapter_inputs = []
@@ -102,6 +99,10 @@ def assemble_documentary_run(state_path: str | Path,
             if provider not in {"agnes", "pexels"}:
                 raise DocumentaryAssemblyError(f"Unknown visual provider provenance: {provider}")
         chapter_inputs.append((chapter, audio, subtitles, shots))
+
+    ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
+    if not ffmpeg or not ffprobe:
+        raise DocumentaryAssemblyError("FFmpeg and ffprobe are required.")
 
     target_seconds = float(state.get("target_duration_seconds") or 0)
     output = Path(output_file)
