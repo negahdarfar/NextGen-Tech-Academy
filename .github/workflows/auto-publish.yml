@@ -34,6 +34,8 @@ jobs:
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
       LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'omniroute,gemini,groq,openrouter' }}
+      AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+      AGNES_BASE_URL: https://apihub.agnes-ai.com/v1
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
       YOUTUBE_PRIVACY_STATUS: private
@@ -46,12 +48,13 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
           INPUT_UPLOAD: ${{ inputs.upload }}
         run: |
           set -euo pipefail
-          [ -n "$PEXELS_API_KEY" ] || { echo "Missing GitHub Actions Secret: PEXELS_API_KEY (free Pexels API key required for stock footage)."; exit 1; }
+          [ -n "$AGNES_API_KEY$PEXELS_API_KEY" ] || { echo "Configure AGNES_API_KEY (Agnes AI video) or PEXELS_API_KEY (free stock footage)."; exit 1; }
           if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY" ]; then
             echo "Configure at least one LLM secret: GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY."
             exit 1
