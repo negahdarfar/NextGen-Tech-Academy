@@ -29,7 +29,7 @@ def test_process_chapter_researches_writes_script_and_updates_state(tmp_path, mo
     monkeypatch.setattr(chapters, "generate_json", lambda *a, **k: {
         "narration_en": narration, "subtitle_fa": "ترجمه کامل فارسی",
         "claims": [{"text": "A supported claim", "source_ids": ["src1"]}],
-        "visual_shots": [{"visual_prompt": f"Shot {i}: cinematic science laboratory"} for i in range(4)],
+        "visual_shots": [{"visual_prompt": f"Shot {i}: cinematic science laboratory", "stock_search_query": "science laboratory robot"} for i in range(4)],
     })
     result = chapters.process_documentary_chapter(state, 1, tmp_path / "out")
     assert result["status"] == "scripted"
