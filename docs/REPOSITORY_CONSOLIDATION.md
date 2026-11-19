@@ -18,7 +18,7 @@ This inventory records why assets were or were not copied. Source repositories r
 - `moneyprinterturbo.yml`, daily Shorts schedules, portrait/9:16 render steps, and batch-specific uploader scripts: these are explicitly configured for four vertical Shorts and should not control the standard 16:9 documentary factory.
 - Competitor research script that queries `videoDuration=short`: its data model is Shorts-specific.
 - YouTube Analytics script: it requires `yt-analytics.readonly`; the existing upload authorization is not expanded and no new OAuth consent is requested here.
-- FreeLLMAPI router/runtime and provider-specific credentials: those components depend on distinct gateway endpoints and secrets. They require a separate compatibility review; no secret values are readable or copied through this integration.
+- FreeLLMAPI autonomous agent runtime and phone/Tailscale gateway: not ported. The standalone explicit-free model catalogue checker was reviewed and integrated into the NextGen LLM fallback chain for the optional cloud endpoint only. Provider credentials still require manual secure entry; no secret values are readable or copied through this integration.
 - Provider-specific scripts requiring a different API key set (Gemini/Pixabay) or unknown paid quotas: not enabled in the canonical workflow.
 
 ## Secret and archival policy
