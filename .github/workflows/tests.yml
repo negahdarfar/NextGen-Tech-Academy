@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      DATA_DIR: ${{ runner.temp }}/omniroute-smoke-data
+      DATA_DIR: /tmp/omniroute-smoke-data
       NODE_ENV: production
       HOSTNAME: 127.0.0.1
       PORT: "20128"
