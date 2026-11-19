@@ -111,7 +111,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         "Sources discovered for this episode (review before public release):\n"
         + "\n".join(f"- {source['publisher']}: {source['title']} — {source['url']}"
                      for source in sources[:8])
-        + "\n\nAI-generated video scenes were created with Agnes AI Video 2.5 Flash where available.\n"
+        + ("\n\nAI-generated scenes: Agnes AI Video 2.5 Flash.\n" if "agnes" in providers_used else "\n\nVisuals: Pexels stock footage.\n")
         + "\n".join(credits)
         + "\n\nSubscribe for more technology explainers."
     )
