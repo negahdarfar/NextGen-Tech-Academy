@@ -131,3 +131,14 @@ nextgen-academy documentary-assemble --state output/documentary-run.json --outpu
 ```
 
 The assembler synchronizes the visual timeline to measured chapter narration durations, concatenates English audio, offsets Persian subtitle cues, exports 1920×1080/30fps and checks the rendered duration against the blueprint tolerance. This is a technical assembly gate, not factual, translation, copyright, or editorial approval. A human must watch the complete video and review the source/rights ledger before marking chapters reviewed or uploading. The long-form CLI is manually invoked; the one-minute scheduled workflow is not silently repurposed for 15–60-minute jobs.
+
+
+### One-command resumable factory and GitHub Actions
+
+For a fully automated run, use the explicit confirmation gate:
+
+```bash
+nextgen-academy documentary-produce --topic "How AI is changing scientific research" --minutes 15 --state output/documentary-run.json --output-dir output/documentary --provider auto --confirm-provider-requests
+```
+
+The command initializes a blueprint only when the state file does not exist, then resumes chapter-by-chapter at the last saved stage. It stops on a failed chapter without discarding completed work. It does not upload to YouTube. The `longform-documentary.yml` workflow offers the same path from Actions → Long-form documentary factory; generation must be explicitly confirmed, and output is retained as a private workflow artifact. A 60-minute run can require hundreds of video-provider requests and may exceed free quotas or runner time; use staged/resumable runs and verify the current provider quota before starting.
