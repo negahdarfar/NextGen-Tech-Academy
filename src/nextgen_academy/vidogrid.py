@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 
 API_BASE_URL = "https://api.vidogrid.ai/uapi/v1"
+DEFAULT_VIDEO_ENDPOINT = "/video-gen/grok-imagine-video-1.5-lite"
 
 
 class VidoGridError(RuntimeError):
@@ -23,7 +24,9 @@ class VidoGridError(RuntimeError):
 class VidoGridSettings:
     api_key: str
     base_url: str = API_BASE_URL
-    model: str = "veo-3.1-fast"
+    endpoint: str = DEFAULT_VIDEO_ENDPOINT
+    model: str = "grok-imagine-video-1.5-lite"
+    duration_seconds: int = 15
     aspect_ratio: str = "16:9"
     resolution: str = "720p"
     timeout_seconds: int = 60
@@ -33,10 +36,18 @@ class VidoGridSettings:
         api_key = os.getenv("VIDOGRID_API_KEY", "").strip()
         if not api_key:
             raise ValueError("VIDOGRID_API_KEY is required for VidoGrid operations")
+        endpoint = os.getenv("VIDOGRID_ENDPOINT", DEFAULT_VIDEO_ENDPOINT).strip()
+        if not endpoint.startswith("/video-gen/"):
+            raise ValueError("VIDOGRID_ENDPOINT must be a /video-gen/ path")
+        duration = int(os.getenv("VIDOGRID_DURATION_SECONDS", "15"))
+        if not 1 <= duration <= 15:
+            raise ValueError("VIDOGRID_DURATION_SECONDS must be between 1 and 15")
         return cls(
             api_key=api_key,
             base_url=os.getenv("VIDOGRID_BASE_URL", API_BASE_URL).strip().rstrip("/"),
-            model=os.getenv("VIDOGRID_MODEL", "veo-3.1-fast").strip(),
+            endpoint=endpoint,
+            model=os.getenv("VIDOGRID_MODEL", "grok-imagine-video-1.5-lite").strip(),
+            duration_seconds=duration,
             aspect_ratio=os.getenv("VIDOGRID_ASPECT_RATIO", "16:9").strip(),
             resolution=os.getenv("VIDOGRID_RESOLUTION", "720p").strip(),
         )
@@ -82,11 +93,15 @@ class VidoGridClient:
             raise ValueError("prompt cannot be empty")
         boundary = f"----NextGen{uuid.uuid4().hex}"
         fields = {
-            "model": self.settings.model,
             "prompt": prompt,
+            "duration": str(self.settings.duration_seconds),
             "aspect_ratio": self.settings.aspect_ratio,
             "resolution": self.settings.resolution,
         }
+        # The Veo endpoint selects its model through a form field; the Grok
+        # Lite endpoint is model-specific and uses the duration field directly.
+        if self.settings.endpoint == "/video-gen/veo":
+            fields["model"] = self.settings.model
         chunks: list[bytes] = []
         for name, value in fields.items():
             chunks.extend([
@@ -98,7 +113,7 @@ class VidoGridClient:
         chunks.append(f"--{boundary}--\r\n".encode())
         response = self._request(
             "POST",
-            "/video-gen/veo",
+            self.settings.endpoint,
             body=b"".join(chunks),
             content_type=f"multipart/form-data; boundary={boundary}",
         )
