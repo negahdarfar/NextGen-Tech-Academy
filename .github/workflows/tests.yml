@@ -40,7 +40,7 @@ jobs:
           node-version: "22.22.2"
       - name: Install OmniRoute
         run: |
-          npm install --global omniroute@3.8.54
+          OMNIROUTE_SKIP_POSTINSTALL=1 npm install --global omniroute@3.8.54
       - name: Initialize and start local gateway
         shell: bash
         run: |
