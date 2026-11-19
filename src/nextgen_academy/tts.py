@@ -51,8 +51,10 @@ def synthesize_storyboard(storyboard_path: str | Path, output_wav: str | Path,
         ]
         if speaker_id is not None:
             command += ["--speaker", str(speaker_id)]
-        command += ["--", str(scene["narration_en"]).strip()]
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = subprocess.run(
+            command, input=str(scene["narration_en"]).strip(),
+            capture_output=True, text=True,
+        )
         if result.returncode != 0 or not target.is_file():
             raise TTSError(f"Piper failed on scene {index}: {result.stderr[-1500:]}")
         probe = subprocess.run(
