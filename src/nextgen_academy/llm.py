@@ -7,17 +7,21 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from .free_model_router import discover_free_models
+
 
 class LLMError(RuntimeError):
     pass
 
 
 def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
-    order = [p.strip().lower() for p in os.getenv("LLM_PROVIDER_ORDER", "omniroute,gemini,groq,openrouter").split(",") if p.strip()]
+    order = [p.strip().lower() for p in os.getenv("LLM_PROVIDER_ORDER", "freellmapi,omniroute,gemini,groq,openrouter").split(",") if p.strip()]
     failures: list[str] = []
     for provider in order:
         try:
-            if provider == "omniroute" and os.getenv("OMNIROUTE_BASE_URL"):
+            if provider == "freellmapi" and os.getenv("FREELLMAPI_CLOUD_BASE_URL") and os.getenv("FREELLMAPI_CLOUD_API_KEY"):
+                raw = _freellmapi(system_prompt, user_prompt)
+            elif provider == "omniroute" and os.getenv("OMNIROUTE_BASE_URL"):
                 raw = _omniroute(system_prompt, user_prompt)
             elif provider == "gemini" and os.getenv("GEMINI_API_KEY"):
                 raw = _gemini(system_prompt, user_prompt)
@@ -45,6 +49,34 @@ def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
     if not failures:
         raise LLMError("No cloud LLM provider is configured. Set OMNIROUTE_BASE_URL or add GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
     raise LLMError("All configured LLM providers failed: " + " | ".join(failures))
+
+
+
+def _freellmapi(system_prompt: str, user_prompt: str) -> str:
+    """Use only models explicitly identified as free by a cloud gateway catalogue."""
+    base_url = os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip().rstrip("/")
+    api_key = os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip()
+    if not base_url or not api_key:
+        raise LLMError("FREELLMAPI cloud URL and API key must both be configured.")
+    if not base_url.startswith(("http://", "https://")):
+        raise LLMError("FREELLMAPI_CLOUD_BASE_URL must be an http(s) URL.")
+    preferred = os.getenv("FREELLMAPI_MODEL", "auto").strip() or "auto"
+    models = discover_free_models(base_url, api_key, task="general", preferred=preferred)
+    if not models:
+        raise LLMError("FreeLLMAPI catalogue exposed no explicitly free models; paid or unknown-price models were skipped.")
+    if base_url.endswith("/chat/completions"):
+        endpoint = base_url
+    elif base_url.endswith("/v1"):
+        endpoint = base_url + "/chat/completions"
+    else:
+        endpoint = base_url + "/v1/chat/completions"
+    failures = []
+    for model in models:
+        try:
+            return _openai_compatible(endpoint, api_key, model, system_prompt, user_prompt)
+        except Exception as exc:
+            failures.append(f"{model}: {str(exc)[:200]}")
+    raise LLMError("All explicitly free FreeLLMAPI models failed: " + " | ".join(failures))
 
 
 def _post(url: str, payload: dict[str, Any], headers: dict[str, str], timeout: int = 120) -> dict[str, Any]:
