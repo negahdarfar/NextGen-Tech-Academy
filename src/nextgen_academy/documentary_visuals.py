@@ -1,4 +1,4 @@
-"""Resumable chapter visual generation with explicit free-provider routing."""
+"""Resumable chapter visual generation with explicit cost-aware provider routing."""
 from __future__ import annotations
 
 import hashlib
@@ -23,19 +23,28 @@ def _save(path: Path, data: dict[str, Any]) -> None:
     temp.replace(path)
 
 
-def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
-                             script_path: str | Path,
-                             output_dir: str | Path = "output/documentary/visuals",
-                             provider: str = "auto",\n                             allow_agnes_potential_cost: bool = False) -> dict[str, Any]:
-    """Generate/restore each shot; persist provenance after every successful asset."""
+def generate_chapter_visuals(
+    state_path: str | Path,
+    chapter_number: int,
+    script_path: str | Path,
+    output_dir: str | Path = "output/documentary/visuals",
+    provider: str = "auto",
+    allow_agnes_potential_cost: bool = False,
+) -> dict[str, Any]:
+    """Generate or resume every shot and persist provenance after each success.
+
+    Auto mode is Pexels-only. Agnes requires explicit provider selection and a
+    separate acknowledgement because its temporary free promotion may expire.
+    """
     if provider not in {"auto", "agnes", "pexels"}:
         raise ValueError("provider must be auto, agnes or pexels")
     state = load_run_state(state_path)
-    chapter = next((item for item in state["chapters"] if item["chapter"] == chapter_number), None)
+    chapter = next((item for item in state["chapters"] if int(item["chapter"]) == chapter_number), None)
     if chapter is None:
         raise ValueError(f"Unknown chapter number: {chapter_number}")
     if chapter["status"] not in {"narrated", "assembled"}:
         raise DocumentaryVisualError("Generate visuals after the chapter has a completed narration stage.")
+
     script_file = Path(script_path)
     if not script_file.is_file():
         raise FileNotFoundError(script_file)
@@ -48,14 +57,19 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
     clip_seconds = int(script.get("visual_clip_target_seconds", chapter.get("visual_clip_target_seconds", 12)))
     if clip_seconds not in (4, 6, 8, 10, 12):
         raise DocumentaryVisualError("Unsupported clip target in chapter script.")
+
     agnes_key = os.getenv("AGNES_API_KEY", "").strip()
     pexels_key = os.getenv("PEXELS_API_KEY", "").strip()
-    if provider == "agnes" and not agnes_key:
-        raise DocumentaryVisualError("AGNES_API_KEY is missing; no visual request was sent.")
-    if provider == "pexels" and not pexels_key:
-        raise DocumentaryVisualError("PEXELS_API_KEY is missing; no visual request was sent.")
-    if provider == "auto" and not (agnes_key or pexels_key):
-        raise DocumentaryVisualError("Configure AGNES_API_KEY or PEXELS_API_KEY. No paid fallback is enabled.")
+    if provider in {"auto", "pexels"} and not pexels_key:
+        raise DocumentaryVisualError("Zero-budget auto/Pexels mode requires PEXELS_API_KEY.")
+    if provider == "agnes":
+        if not agnes_key:
+            raise DocumentaryVisualError("AGNES_API_KEY is missing; no visual request was sent.")
+        if not allow_agnes_potential_cost:
+            raise DocumentaryVisualError(
+                "Agnes may incur charges if its temporary free promotion has ended. "
+                "Pass --allow-agnes-potential-cost only after checking current pricing."
+            )
 
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
@@ -63,17 +77,29 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
     script_hash = hashlib.sha256(script_file.read_bytes()).hexdigest()
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if (manifest.get("chapter") != chapter_number or manifest.get("script_path") != str(script_file)
+        if (manifest.get("chapter") != chapter_number
+                or manifest.get("script_path") != str(script_file)
                 or manifest.get("script_sha256") != script_hash):
-            raise DocumentaryVisualError("Existing asset manifest belongs to a different script; use a new output directory.")
+            raise DocumentaryVisualError(
+                "Existing asset manifest belongs to a different script; use a new output directory."
+            )
     else:
-        manifest = {"chapter": chapter_number, "script_path": str(script_file),
-                    "clip_target_seconds": clip_seconds, "script_sha256": script_hash,
-                    "status": "in_progress", "shots": []}
-    completed = {int(item["shot"]): item for item in manifest["shots"]
-                 if item.get("status") == "downloaded" and
-                 Path(item.get("local_path", "")).is_file() and
-                 Path(item.get("local_path", "")).stat().st_size > 1024}
+        manifest = {
+            "chapter": chapter_number,
+            "script_path": str(script_file),
+            "clip_target_seconds": clip_seconds,
+            "script_sha256": script_hash,
+            "status": "in_progress",
+            "shots": [],
+        }
+
+    completed = {
+        int(item["shot"]): item
+        for item in manifest["shots"]
+        if item.get("status") == "downloaded"
+        and Path(item.get("local_path", "")).is_file()
+        and Path(item.get("local_path", "")).stat().st_size > 1024
+    }
     resumed_count = len(completed)
     for index, shot in enumerate(shots, 1):
         prompt = str(shot.get("visual_prompt", "")).strip() if isinstance(shot, dict) else ""
@@ -81,46 +107,45 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
             raise DocumentaryVisualError(f"Visual shot {index} has an empty prompt.")
         if index in completed:
             continue
+
         target = root / f"chapter-{chapter_number:02d}-shot-{index:03d}.mp4"
-        result = None
-        errors = []
-        order = ([provider] if provider != "auto" else
-                 (["agnes", "pexels"] if agnes_key and pexels_key else
-                  ["agnes"] if agnes_key else ["pexels"]))
-        for selected in order:
-            try:
-                if selected == "agnes":
-                    result = generate_scene_video(prompt, target, seconds=clip_seconds)
-                else:
-                    result = download_scene_video(prompt, target, min_duration=clip_seconds)
-                    result["provider"] = "pexels"
-                break
-            except Exception as exc:
-                errors.append(f"{selected}: {str(exc)[:500]}")
-                if provider != "auto":
-                    raise DocumentaryVisualError("; ".join(errors)) from exc
-        if result is None:
-            raise DocumentaryVisualError(f"Shot {index} failed: " + " | ".join(errors))
+        if provider == "agnes":
+            result = generate_scene_video(prompt, target, seconds=clip_seconds)
+        else:
+            result = download_scene_video(prompt, target, min_duration=clip_seconds)
+            result["provider"] = "pexels"
+
         local_path = Path(result.get("local_path", target))
         if not local_path.is_file() or local_path.stat().st_size < 1024:
             raise DocumentaryVisualError(f"Provider did not create a valid clip for shot {index}.")
-        item = {"shot": index, "visual_prompt": prompt, "status": "downloaded",
-                "local_path": str(local_path), "provider": result.get("provider"),
-                "model": result.get("model"), "video_id": result.get("video_id"),
-                "source_url": result.get("source_url"), "photographer": result.get("photographer"),
-                "duration_seconds": result.get("duration_seconds"),
-                "resolution": result.get("resolution"), "fallback_errors": errors}
+        item = {
+            "shot": index,
+            "visual_prompt": prompt,
+            "status": "downloaded",
+            "local_path": str(local_path),
+            "provider": result.get("provider"),
+            "model": result.get("model"),
+            "video_id": result.get("video_id"),
+            "source_url": result.get("source_url"),
+            "photographer": result.get("photographer"),
+            "duration_seconds": result.get("duration_seconds"),
+            "resolution": result.get("resolution"),
+        }
         completed[index] = item
         manifest["shots"] = [completed[key] for key in sorted(completed)]
         manifest["status"] = "in_progress"
         _save(manifest_path, manifest)
+
     manifest["shots"] = [completed[key] for key in sorted(completed)]
     manifest["status"] = "complete" if len(manifest["shots"]) == len(shots) else "in_progress"
     manifest["providers_used"] = sorted({item.get("provider", "unknown") for item in manifest["shots"]})
     _save(manifest_path, manifest)
-    update_chapter_state(state_path, chapter_number,
-                         outputs={"visual_manifest": str(manifest_path)})
-    return {"chapter": chapter_number, "status": manifest["status"],
-            "shot_count": len(manifest["shots"]), "providers_used": manifest["providers_used"],
-            "manifest_path": str(manifest_path),
-            "resumed_existing_shots": resumed_count}
+    update_chapter_state(state_path, chapter_number, outputs={"visual_manifest": str(manifest_path)})
+    return {
+        "chapter": chapter_number,
+        "status": manifest["status"],
+        "shot_count": len(manifest["shots"]),
+        "providers_used": manifest["providers_used"],
+        "manifest_path": str(manifest_path),
+        "resumed_existing_shots": resumed_count,
+    }
