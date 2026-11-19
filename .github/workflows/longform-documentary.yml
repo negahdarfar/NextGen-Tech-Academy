@@ -60,6 +60,22 @@ jobs:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+      - name: Calculate resumable run identity
+        id: identity
+        shell: bash
+        env:
+          INPUT_TOPIC: ${{ inputs.topic }}
+          INPUT_MINUTES: ${{ inputs.minutes }}
+        run: |
+          set -euo pipefail
+          TOPIC_HASH="$(printf "%s" "$INPUT_TOPIC" | sha256sum | cut -c1-16)"
+          echo "key=nextgen-longform-$INPUT_MINUTES-$TOPIC_HASH" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        with:
+          path: output/
+          key: ${{ steps.identity.outputs.key }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ steps.identity.outputs.key }}-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -97,6 +113,12 @@ jobs:
           EXTRA_ARGS=()
           if [ "$INPUT_ALLOW_AGNES_COST" = "true" ]; then EXTRA_ARGS+=(--allow-agnes-potential-cost); fi
           nextgen-academy documentary-produce --topic "$INPUT_TOPIC" --minutes "$INPUT_MINUTES" --state output/documentary-run.json --output-dir output/documentary --provider "$INPUT_PROVIDER" --confirm-provider-requests "${EXTRA_ARGS[@]}"
+      - name: Save resumable state and generated assets for the next attempt
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: output/
+          key: ${{ steps.identity.outputs.key }}-${{ github.run_id }}
       - name: Preserve resumable state and production assets
         if: always()
         uses: actions/upload-artifact@v4
