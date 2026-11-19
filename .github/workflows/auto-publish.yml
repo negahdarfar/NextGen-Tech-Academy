@@ -41,7 +41,7 @@ jobs:
       TTS_VOICE: en-US-AriaNeural
     steps:
       - uses: actions/checkout@v4
-      - name: Validate required GitHub secrets and cost settings
+      - name: Validate required GitHub secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
