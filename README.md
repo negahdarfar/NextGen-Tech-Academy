@@ -65,3 +65,8 @@ The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute t
 Selected MIT-licensed YouTube editorial skills and their helper scripts are vendored under `.claude/skills/`; see [docs/AGENT_SKILLS.md](docs/AGENT_SKILLS.md) for their purpose, commands, license, and execution limits. GitHub Actions does not execute agent skill files automatically.
 
 The current automated production workflow remains a one-minute 16:9 episode. A separate [documentary clip assembler](scripts/assemble_documentary.py) can join existing clips with optional narration and Persian subtitles, but it is only an assembly utility—not yet an end-to-end long-form documentary generator. See [docs/PRODUCTION_PIPELINE.md](docs/PRODUCTION_PIPELINE.md).
+
+
+### Optional free-model gateway
+
+The LLM fallback chain can optionally use a cloud FreeLLMAPI-compatible endpoint through `FREELLMAPI_CLOUD_BASE_URL` and `FREELLMAPI_CLOUD_API_KEY`. It first inspects `GET /models` and calls only models explicitly marked free by their ID or structured catalogue pricing; unknown-price and paid models are skipped. This path does not use the Android phone or Tailscale. Secret values are not copied between repositories; configure the pair directly in the canonical repository's Actions Secrets if you want this optional route.
