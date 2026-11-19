@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .config import Settings
+from .config import Settings, load_dotenv
 from .ollama_writer import draft_storyboard
 from .planning import build_plan, plan_as_dict
 from .script import default_storyboard, save_script_package, storyboard_subtitles
@@ -95,6 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+    load_dotenv()
     Settings.from_env()
 
     if args.command == "plan":
