@@ -53,3 +53,20 @@ def test_vidogrid_router_accepts_documented_model_families(monkeypatch):
         "omni-1.2-flash", "grok-imagine-video-1.5-lite",
     ]
     assert router.clients["veo-3.1-fast"].settings.endpoint == "/video-gen/veo"
+
+
+def test_total_balance_requires_explicit_free_only_confirmation(monkeypatch):
+    monkeypatch.setenv("VIDOGRID_MODEL_CREDIT_COSTS", '{"grok-imagine-video-1.5-lite": 1}')
+    monkeypatch.delenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", raising=False)
+    with pytest.raises(RuntimeError, match="VIDOGRID_TOTAL_BALANCE_IS_FREE"):
+        _require_free_credit_budget(
+            {"balance": 10}, models=["grok-imagine-video-1.5-lite"]
+        )
+
+
+def test_total_balance_can_be_used_after_explicit_free_only_confirmation(monkeypatch):
+    monkeypatch.setenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", "true")
+    monkeypatch.setenv("VIDOGRID_MODEL_CREDIT_COSTS", '{"grok-imagine-video-1.5-lite": 2}')
+    _require_free_credit_budget(
+        {"account": {"balance": 8}}, models=["grok-imagine-video-1.5-lite"] * 4
+    )
