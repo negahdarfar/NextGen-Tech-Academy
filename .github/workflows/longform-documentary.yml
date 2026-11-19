@@ -52,7 +52,7 @@ jobs:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
-      LLM_PROVIDER_ORDER: "freellmapi,gemini,groq,openrouter"
+      LLM_PROVIDER_ORDER: "freellmapi,openrouter"
       AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
     steps:
@@ -72,7 +72,7 @@ jobs:
           if [ "$INPUT_VISUAL_PROVIDER" = "pexels" ] && [ -z "$PEXELS_API_KEY" ]; then echo "PEXELS_API_KEY missing"; exit 1; fi
           if [ "$INPUT_VISUAL_PROVIDER" = "auto" ] && [ -z "$AGNES_API_KEY$PEXELS_API_KEY" ]; then echo "Configure AGNES_API_KEY or PEXELS_API_KEY"; exit 1; fi
         env:
-          INPUT_VISUAL_PROVIDER: ${{ inputs.visual_provider }}
+          INPUT_VISUAL_PROVIDER: ${{ inputs.visual_provider }}\n          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
       - name: Install FFmpeg
         run: |
           sudo apt-get update
@@ -83,10 +83,10 @@ jobs:
         env:
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_MINUTES: ${{ inputs.minutes }}
-          INPUT_PROVIDER: ${{ inputs.visual_provider }}
+          INPUT_PROVIDER: ${{ inputs.visual_provider }}\n          INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
         run: |
           set -euo pipefail
-          nextgen-academy documentary-produce --topic "$INPUT_TOPIC" --minutes "$INPUT_MINUTES" --state output/documentary-run.json --output-dir output/documentary --provider "$INPUT_PROVIDER" --confirm-provider-requests
+          nextgen-academy documentary-produce --topic "$INPUT_TOPIC" --minutes "$INPUT_MINUTES" --state output/documentary-run.json --output-dir output/documentary --provider "$INPUT_PROVIDER" --confirm-provider-requests \\\n            $([ "$INPUT_ALLOW_AGNES_COST" = "true" ] && echo "--allow-agnes-potential-cost")
       - name: Preserve resumable state and production assets
         if: always()
         uses: actions/upload-artifact@v4
