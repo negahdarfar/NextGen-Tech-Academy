@@ -78,12 +78,18 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         "Source notes (use only these for factual claims):\n"
         + json.dumps(source_notes, ensure_ascii=False)
     )
-    clip_seconds = int(chapter.get("visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)))\n    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds\n    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
+    clip_seconds = int(chapter.get("visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)))
+    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds\n    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
     narration = str(data.get("narration_en", "")).strip()
     translation = str(data.get("subtitle_fa", "")).strip()
     claims = data.get("claims")\n    visual_shots = data.get("visual_shots")
     if not narration or not translation or not isinstance(claims, list):
         raise ValueError("Model output must include narration_en, subtitle_fa and claims.")
+    if not isinstance(visual_shots, list) or len(visual_shots) != shot_count:
+        raise ValueError(f"Model must return exactly {shot_count} visual_shots for this chapter.")
+    for index, shot in enumerate(visual_shots, 1):
+        if not isinstance(shot, dict) or not str(shot.get("visual_prompt", "")).strip():
+            raise ValueError(f"Visual shot {index} is missing visual_prompt.")
     word_count = len(narration.split())
     if not max(50, int(words * 0.65)) <= word_count <= int(words * 1.35):
         raise ValueError(f"Chapter narration has {word_count} words; target is about {words}.")
@@ -100,7 +106,8 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         "title": chapter["title"], "duration_seconds": chapter["duration_seconds"],
         "target_narration_words": words, "actual_narration_words": word_count,
         "narration_en": narration, "subtitle_fa": translation,
-        "claims": claims, "sources": sources, "visual_shots": visual_shots,\n        "visual_clip_target_seconds": clip_seconds,
+        "claims": claims, "sources": sources, "visual_shots": visual_shots,
+        "visual_clip_target_seconds": clip_seconds,
         "review_required": True,
     }
     _write_json(script_path, payload)
