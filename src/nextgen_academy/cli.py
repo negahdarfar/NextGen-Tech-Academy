@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     clips.add_argument("--output", default="output/video-plan.json")
 
     render = sub.add_parser("video-render", help="join downloaded clips into a final MP4")
-    render.add_argument("--jobs-manifest", default="output/vidogrid-jobs.json")
+    render.add_argument("--jobs-manifest", default="output/pexels-jobs.json")
     render.add_argument("--output", default="output/final-video.mp4")
     render.add_argument("--subtitles", default=None)
     render.add_argument("--narration-audio", default=None)
