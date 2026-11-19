@@ -13,11 +13,13 @@ class LLMError(RuntimeError):
 
 
 def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
-    order = [p.strip().lower() for p in os.getenv("LLM_PROVIDER_ORDER", "gemini,groq,openrouter").split(",") if p.strip()]
+    order = [p.strip().lower() for p in os.getenv("LLM_PROVIDER_ORDER", "omniroute,gemini,groq,openrouter").split(",") if p.strip()]
     failures: list[str] = []
     for provider in order:
         try:
-            if provider == "gemini" and os.getenv("GEMINI_API_KEY"):
+            if provider == "omniroute" and os.getenv("OMNIROUTE_API_KEY"):
+                raw = _omniroute(system_prompt, user_prompt)
+            elif provider == "gemini" and os.getenv("GEMINI_API_KEY"):
                 raw = _gemini(system_prompt, user_prompt)
             elif provider == "groq" and os.getenv("GROQ_API_KEY"):
                 raw = _openai_compatible("https://api.groq.com/openai/v1/chat/completions",
@@ -41,7 +43,7 @@ def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
         except Exception as exc:
             failures.append(f"{provider}: {str(exc)[:300]}")
     if not failures:
-        raise LLMError("No cloud LLM provider is configured. Add GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
+        raise LLMError("No cloud LLM provider is configured. Add OMNIROUTE_API_KEY, GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
     raise LLMError("All configured LLM providers failed: " + " | ".join(failures))
 
 
@@ -52,6 +54,27 @@ def _post(url: str, payload: dict[str, Any], headers: dict[str, str], timeout: i
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
 
+
+def _omniroute(system_prompt: str, user_prompt: str) -> str:
+    """Call the self-hosted OmniRoute OpenAI-compatible gateway."""
+    base_url = os.getenv("OMNIROUTE_BASE_URL", "http://127.0.0.1:20128/v1").strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        raise LLMError("OMNIROUTE_BASE_URL must be an http(s) URL")
+    if base_url.endswith("/chat/completions"):
+        url = base_url
+    elif base_url.endswith("/v1"):
+        url = base_url + "/chat/completions"
+    else:
+        url = base_url + "/v1/chat/completions"
+    model = os.getenv("OMNIROUTE_MODEL", "auto/subscription").strip()
+    if not model:
+        raise LLMError("OMNIROUTE_MODEL must not be empty")
+    data = _post(url, {"model": model, "temperature": 0.35,
+                       "response_format": {"type": "json_object"},
+                       "messages": [{"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt}]},
+                 {"Authorization": "Bearer " + os.environ["OMNIROUTE_API_KEY"]}, timeout=180)
+    return data["choices"][0]["message"]["content"]
 
 def _gemini(system_prompt: str, user_prompt: str) -> str:
     model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
