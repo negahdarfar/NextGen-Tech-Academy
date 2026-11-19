@@ -54,7 +54,8 @@ jobs:
         run: |
           set -euo pipefail
           npm install --global npm@11
-          npm install --global --allow-scripts=omniroute,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild omniroute@3.8.55
+          npm install --global npm@11
+          npm install --global --allow-scripts=omniroute,better-sqlite3,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild omniroute@3.8.55
           export DATA_DIR="$RUNNER_TEMP/omniroute-data"
           export NODE_ENV=production
           export HOSTNAME=127.0.0.1
