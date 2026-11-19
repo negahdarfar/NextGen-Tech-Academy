@@ -25,3 +25,20 @@ def test_cloud_llm_fails_when_no_provider_is_configured(monkeypatch):
         monkeypatch.delenv(key, raising=False)
     with pytest.raises(LLMError, match="No cloud LLM"):
         generate_json("system", "user")
+
+
+def test_openrouter_paid_model_is_blocked_by_default(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER_ORDER", "openrouter")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+    monkeypatch.delenv("ALLOW_PAID_LLM", raising=False)
+    with pytest.raises(LLMError, match="All configured cloud LLM providers failed"):
+        generate_json("system", "user")
+
+
+def test_openrouter_free_model_is_allowed(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER_ORDER", "openrouter")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
+    monkeypatch.setenv("OPENROUTER_MODEL", "example/model:free")
+    with patch("nextgen_academy.llm._openai_compatible", return_value='{"ok": true}'):
+        assert generate_json("system", "user") == {"ok": True}
