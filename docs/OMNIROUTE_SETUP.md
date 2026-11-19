@@ -16,7 +16,7 @@ A Gemini API key does not guarantee free use. Google's free-tier eligibility, li
 
 1. GitHub Actions checks out the repository.
 2. Node.js 22.22.2 is installed.
-3. If `GEMINI_API_KEY` exists, the workflow installs `omniroute@3.8.55`, starts it on loopback, and polls `/v1/models`.
+3. If `GEMINI_API_KEY` exists, the workflow installs `omniroute@3.8.55`, generates temporary instance secrets, starts it on loopback, and polls `/v1/models` for the configured Gemini model.
 4. Python and FFmpeg are installed.
 5. NextGen runs its existing credit-guarded production pipeline. The LLM adapter tries OmniRoute first, then the existing configured Gemini/Groq/OpenRouter adapters according to `LLM_PROVIDER_ORDER`.
 6. The existing private-by-default YouTube upload behavior and artifact retention remain unchanged.
