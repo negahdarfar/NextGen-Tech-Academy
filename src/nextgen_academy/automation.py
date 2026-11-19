@@ -43,7 +43,8 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
                                os.getenv("TTS_VOICE", "en-US-AriaNeural"))
     client = VidoGridClient(VidoGridSettings.from_env())
     account = client.account()
-    print("VidoGrid account response:", json.dumps(account, ensure_ascii=False)[:1500])
+    _require_free_credit_budget(account, clips=len(segments))
+    print("VidoGrid free-credit check passed:", json.dumps(account, ensure_ascii=False)[:1500])
     router = _VidoGridRouter()
     jobs_path = root / "vidogrid-jobs.json"
     submit_segments(segments, router, jobs_path)
