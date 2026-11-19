@@ -2,8 +2,10 @@ name: Python tests
 
 on:
   pull_request:
-  push:
     branches: [main]
+  push:
+    branches: [main, feat/initial-project-foundation]
+  workflow_dispatch:
 
 jobs:
   test:
