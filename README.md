@@ -58,3 +58,10 @@ The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute t
 - Free API tiers and promotions vary by provider and can change.
 - Agnes Flash output is 720p and at most 12 seconds per generated clip; short clips are looped to match the storyboard timeline.
 - No public upload is enabled by default.
+
+
+## Editorial skills and long-form tooling
+
+Selected MIT-licensed YouTube editorial skills and their helper scripts are vendored under `.claude/skills/`; see [docs/AGENT_SKILLS.md](docs/AGENT_SKILLS.md) for their purpose, commands, license, and execution limits. GitHub Actions does not execute agent skill files automatically.
+
+The current automated production workflow remains a one-minute 16:9 episode. A separate [documentary clip assembler](scripts/assemble_documentary.py) can join existing clips with optional narration and Persian subtitles, but it is only an assembly utility—not yet an end-to-end long-form documentary generator. See [docs/PRODUCTION_PIPELINE.md](docs/PRODUCTION_PIPELINE.md).
