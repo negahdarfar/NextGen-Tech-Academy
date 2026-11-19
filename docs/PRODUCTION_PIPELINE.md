@@ -1,52 +1,56 @@
-# One-minute production pipeline
+# Cloud-first production pipeline
 
-The current target is a standard 60-second 16:9 YouTube video made from four ordered
-15-second VidoGrid clips. It is not a Short unless the channel owner separately chooses
-a vertical format.
+The target is a standard 60-second, 16:9 YouTube video made from four ordered 15-second clips. Narration is English and subtitles are Persian. The cloud path does not require Ollama or an always-on laptop.
 
-## Stages
+## Automated run
 
-1. Draft a bilingual four-scene script with local Ollama, or create an empty storyboard template.
-2. Add and manually verify at least two HTTPS sources, then map every factual claim to source IDs.
-3. Run the script structure/source-reference gate. It checks completeness, not factual truth.
-4. Generate four linked VidoGrid prompts from the reviewed storyboard. English narration and Persian subtitles are carried into the clip manifest.
-5. Generate Persian SRT and, optionally, local English narration with Piper.
-6. Review VidoGrid credits and explicitly approve paid API submission.
-7. Poll each accepted job UUID, persist status and download completed MP4 files.
-8. Join clips with FFmpeg and mux narration/subtitles.
-9. Generate an editable YouTube metadata package.
-10. Watch the exported video and review duration, continuity, factual accuracy, audio, translation, copyright and watermarks.
-
-## Commands
+The GitHub Actions workflow `.github/workflows/auto-publish.yml` can be started manually or on its Tuesday/Friday schedule.
 
 ```bash
-ollama pull qwen2.5:3b
-nextgen-academy draft-script --topic "How quantum computers work"
-nextgen-academy script-check
-nextgen-academy video-plan --topic "How quantum computers work"
-nextgen-academy subtitles
-nextgen-academy youtube-package
-nextgen-academy voiceover --model models/piper/your-english-voice.onnx
-nextgen-academy video-submit --confirm-paid-api
-nextgen-academy video-download
-nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
+nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing"
+nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing" --upload
 ```
 
-Ollama must be running locally. The default model is `qwen2.5:3b`; it can be overridden
-with `--model` and `--ollama-url`. Piper voice synthesis is optional and requires the
-`voice` extra, a downloaded ONNX voice and its JSON config. Review the voice license.
+When no topic is supplied, RSS headlines are used to choose a topic. The automated run:
 
-## Known boundaries
+1. Discovers candidate articles and papers from RSS feeds.
+2. Uses the configured cloud LLM fallback order (Gemini, Groq, OpenRouter) to draft four English narration scenes and Persian translations.
+3. Carries source URLs and claim-to-source IDs into the storyboard. RSS discovery and model-generated citations are not proof; review source contents.
+4. Creates four linked video prompts.
+5. Generates English narration using the configured cloud TTS adapter and Persian SRT subtitles.
+6. Checks VidoGrid account data and refuses to submit unless a separately reported free/trial balance and model-specific cost estimates cover the complete rotation.
+7. Rotates selected models across clips, saves each accepted job UUID, polls job history and downloads completed clips.
+8. Assembles the clips with FFmpeg and checks that the output is approximately one minute.
+9. Creates YouTube metadata and, only when `--upload` is supplied, uploads through OAuth as **private** by default.
 
-- Ollama produces a draft only. It does not browse for sources or verify claims.
-- The script review gate validates fields, HTTPS URLs and claim-to-source IDs. A person
-  must open every source and decide whether it supports the claim.
-- VidoGrid history payloads can evolve. The adapter must be checked against a live account
-  before relying on it in production.
-- VidoGrid generation consumes account credits. Submission requires both a command-line
-  acknowledgement and an interactive confirmation.
-- Piper voice quality, model availability and license depend on the selected model.
-- The SEO package is a template, not live keyword research or a ranking guarantee.
-- Automated research, competitor analysis, thumbnail image generation, music/sound design,
-  YouTube OAuth/upload/scheduling and analytics feedback are not implemented yet.
-- Human review of the complete export remains mandatory.
+## Configure cloud providers
+
+Store keys as GitHub Actions Secrets, never in the repository:
+
+- `VIDOGRID_API_KEY`
+- At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`
+- `YOUTUBE_TOKEN_JSON` for OAuth upload with the `youtube.upload` scope
+
+Configure these Actions Variables:
+
+- `LLM_PROVIDER_ORDER`, e.g. `gemini,groq,openrouter`
+- `VIDOGRID_MODEL_ROTATION`, e.g. `grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash`
+- `VIDOGRID_MODEL_CREDIT_COSTS`, JSON object with a checked current credit estimate for every selected model
+
+The credit costs are account-specific and must be taken from the current VidoGrid account/pricing interface. Do not copy example values as if they were real prices. If the API only reports a combined balance rather than a separate free/trial balance, the workflow stops before generating any clip.
+
+## Upload and publishing safety
+
+- Upload is private by default.
+- Public visibility is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is deliberately configured.
+- The YouTube OAuth token must be refreshed and valid before VidoGrid generation begins.
+- Public publishing should remain disabled until the first private upload and a complete human quality review succeed.
+- GitHub Actions minutes, storage and artifact quotas apply.
+
+## Local development
+
+Ollama remains an optional development tool, not a cloud runtime dependency. The cloud path can be tested locally with Python, FFmpeg and the `cloud` extra, provided all required credentials are supplied in the environment or a local ignored `.env` file.
+
+## Not yet proven in a live account
+
+Automated tests mock external providers. They do not validate the user's VidoGrid account balance schema, live model entitlements, real job history response, TTS availability, YouTube OAuth or actual video quality. The first run must be supervised and private.
