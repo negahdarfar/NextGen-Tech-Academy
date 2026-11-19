@@ -77,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
     documentary_produce.add_argument("--confirm-provider-requests", action="store_true", help="explicitly allow external LLM, TTS and visual-provider requests")
     documentary_produce.add_argument("--allow-agnes-potential-cost", action="store_true", help="separate acknowledgement that Agnes may be chargeable if its promotion has ended")
 
+    documentary_upload = sub.add_parser("documentary-upload", help="upload only after every chapter is marked reviewed")
+    documentary_upload.add_argument("--state", default="output/documentary-run.json")
+    documentary_upload.add_argument("--video", default="output/documentary/final-documentary.mp4")
+    documentary_upload.add_argument("--metadata", default="output/documentary/youtube-package.json")
+    documentary_upload.add_argument("--privacy-status", choices=("private", "unlisted", "public"), default="private")
+    documentary_upload.add_argument("--approve-upload", action="store_true")
+    documentary_upload.add_argument("--approve-public", action="store_true")
+
     plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
@@ -202,6 +210,15 @@ def main() -> int:
     if args.command == "documentary-assemble":
         from .documentary_assembly import assemble_documentary_run
         result = assemble_documentary_run(args.state, args.output)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "documentary-upload":
+        from .documentary_publish import publish_documentary
+        result = publish_documentary(
+            args.state, args.video, args.metadata, args.privacy_status,
+            args.approve_upload, args.approve_public,
+        )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
