@@ -10,6 +10,7 @@ from typing import Any
 from .documentary_assembly import assemble_documentary_run
 from .documentary_chapters import process_documentary_chapter
 from .documentary_media import synthesize_documentary_chapter
+from .documentary_metadata import build_documentary_metadata
 from .documentary_state import initialize_documentary_run, load_run_state, update_chapter_state
 from .documentary_visuals import generate_chapter_visuals
 
@@ -104,6 +105,10 @@ def produce_documentary(
             ) from exc
 
     result = assemble_documentary_run(state_file, root / "final-documentary.mp4")
+    metadata_path = build_documentary_metadata(
+        state_file, root / "youtube-package.json", result["chapter_timeline"]
+    )
+    result["metadata_path"] = str(metadata_path)
     result.update({
         "topic": state["topic"],
         "completed_chapters": completed,
