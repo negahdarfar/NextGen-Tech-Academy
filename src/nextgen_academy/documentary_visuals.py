@@ -74,13 +74,12 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
                  if item.get("status") == "downloaded" and
                  Path(item.get("local_path", "")).is_file() and
                  Path(item.get("local_path", "")).stat().st_size > 1024}
-    saved = []
+    resumed_count = len(completed)
     for index, shot in enumerate(shots, 1):
         prompt = str(shot.get("visual_prompt", "")).strip() if isinstance(shot, dict) else ""
         if not prompt:
             raise DocumentaryVisualError(f"Visual shot {index} has an empty prompt.")
         if index in completed:
-            saved.append(completed[index])
             continue
         target = root / f"chapter-{chapter_number:02d}-shot-{index:03d}.mp4"
         result = None
@@ -112,7 +111,6 @@ def generate_chapter_visuals(state_path: str | Path, chapter_number: int,
                 "duration_seconds": result.get("duration_seconds"),
                 "resolution": result.get("resolution"), "fallback_errors": errors}
         completed[index] = item
-        saved.append(item)
         manifest["shots"] = [completed[key] for key in sorted(completed)]
         manifest["status"] = "in_progress"
         _save(manifest_path, manifest)
