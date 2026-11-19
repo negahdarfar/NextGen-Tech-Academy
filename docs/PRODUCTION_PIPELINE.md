@@ -52,3 +52,8 @@ python scripts/assemble_documentary.py --clips output/documentary-clips.json --o
 ```
 
 The JSON manifest is an ordered array of local clip paths; relative paths are resolved from the manifest file. The tool normalizes clips to 1920×1080/30fps, joins them in order, and can add a narration track and a soft Persian subtitle track. Add `--burn-subtitles` only when captions should be permanently burned into the picture. FFmpeg is required. This utility does not create long scripts, generate footage, translate subtitles, or upload/publish. It must be tested with real sample media before it is used in a scheduled workflow.
+
+
+### Optional FreeLLMAPI cloud route
+
+The LLM provider chain can use `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` before the existing providers. The adapter calls the gateway model catalogue first and accepts only explicit free markers or machine-readable zero input/output prices. Unknown pricing is not treated as free. This is the cloud endpoint only; it does not connect to the phone/Tailscale gateway. The credentials are optional and must be entered directly as Actions Secrets in this repository if available.
