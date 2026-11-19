@@ -9,7 +9,7 @@ def sources():
 
 def draft(n=20):
     return {"scenes":[{"title":f"Scene {i}","scene":"Visual description",
-        "narration_en":"This technology is changing how researchers solve difficult problems across several industries around the world today.",
+        "narration_en":"This technology is changing how researchers and engineers solve difficult problems across several industries around the world today.",
         "subtitle_fa":"این فناوری شیوه حل مسائل را در صنایع گوناگون تغییر می‌دهد.",
         "source_ids":["src1"]} for i in range(1,n+1)],
         "claims":[{"text":"A supported claim","source_ids":["src1","src2"]}]}
