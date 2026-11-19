@@ -19,3 +19,46 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: Run test suite
         run: python -m pytest -q
+
+  omniroute-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATA_DIR: ${{ runner.temp }}/omniroute-smoke-data
+      NODE_ENV: production
+      HOSTNAME: 127.0.0.1
+      PORT: "20128"
+      REQUIRE_API_KEY: "false"
+      OMNIROUTE_MEMORY_MB: "512"
+      INITIAL_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      JWT_SECRET: ${{ secrets.GITHUB_TOKEN }}
+      API_KEY_SECRET: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.2"
+      - name: Install OmniRoute
+        run: |
+          npm install --global npm@11
+          npm install --global --allow-scripts=omniroute,better-sqlite3,keytar,onnxruntime-node,@parcel/watcher,@swc/core,protobufjs,esbuild omniroute@3.8.55
+      - name: Initialize and start local gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$DATA_DIR"
+          omniroute setup --non-interactive --password "$INITIAL_PASSWORD"
+          nohup omniroute --no-open > "$RUNNER_TEMP/omniroute-smoke.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/omniroute-smoke.pid"
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:20128/v1/models -o "$RUNNER_TEMP/models.json"; then
+              python -c "import json,pathlib; data=json.loads(pathlib.Path('$RUNNER_TEMP/models.json').read_text()); assert isinstance(data, dict)"
+              echo "OmniRoute startup smoke test passed."
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/omniroute-smoke.log"
+          exit 1
+      - name: Stop ephemeral gateway
+        if: always()
+        run: if [ -f "$RUNNER_TEMP/omniroute-smoke.pid" ]; then kill "$(cat "$RUNNER_TEMP/omniroute-smoke.pid")" || true; fi
