@@ -175,8 +175,11 @@ def assemble_documentary_run(state_path: str | Path,
             f"by more than allowed {tolerance:.1f}s; output rejected."
         )
     for chapter, *_ in chapter_inputs:
-        update_chapter_state(state_path, int(chapter["chapter"]), status="assembled",
-                             outputs={"final_documentary": str(output)})
+        update_chapter_state(
+            state_path, int(chapter["chapter"]),
+            status="assembled" if chapter.get("status") == "narrated" else None,
+            outputs={"final_documentary": str(output)},
+        )
     return {"status": "assembled_pending_human_review", "output": str(output),
             "duration_seconds": round(actual, 2), "target_duration_seconds": target_seconds,
             "chapter_count": len(chapter_inputs), "visual_shot_count": len(video_files),
