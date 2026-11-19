@@ -11,7 +11,7 @@ def _state(tmp_path):
     plan.write_text(json.dumps({
         "topic": "AI in science", "target_duration_seconds": 900,
         "chapters": [{"chapter": 1, "title": "The evidence",
-                      "duration_seconds": 100, "target_narration_words": 100}],
+                      "duration_seconds": 45, "target_narration_words": 100}],
     }), encoding="utf-8")
     state = tmp_path / "run.json"
     initialize_documentary_run(plan, state)
