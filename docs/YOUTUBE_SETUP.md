@@ -11,7 +11,7 @@ This setup is required only once on a trusted computer. After the refresh token 
 
 Do not upload the OAuth client file or token file to the repository. Both are ignored by Git.
 
-## 2. Create the refresh token
+**Important token-lifetime warning:** If the OAuth consent screen is configured as External and its publishing status remains **Testing**, Google documents that refresh tokens for YouTube upload scope expire after 7 days. For unattended recurring uploads, configure the consent screen appropriately for production and complete any verification Google requires; do not rely on a Testing-mode token for long-term automation. Google may also revoke tokens if the user revokes access or other expiration conditions apply.\n\n## 2. Create the refresh token
 
 On a trusted computer with Python and a browser:
 
