@@ -68,12 +68,9 @@ nextgen-academy video-download
 nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
 ```
 
-If narration audio is ready, add `--narration-audio path/to/narration.mp3` to the render command.
-
 ## What is not automated yet
 
-- Research source collection and fact-check approval.
-- AI-assisted research, fact-checking and script drafting (still manual at present).
+- Automated research source collection, fact-checking and script drafting (still manual at present).
 - Automatic voiceover generation is now wired to optional local Piper; a voice model must be installed and its license checked.
 - Background music and sound design.
 - Thumbnail generation, chapter/SEO package, analytics feedback loop.
