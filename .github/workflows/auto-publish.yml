@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$AGNES_API_KEY$PEXELS_API_KEY" ] || { echo "Configure AGNES_API_KEY (Agnes AI video) or PEXELS_API_KEY (free stock footage)."; exit 1; }
-          if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY$FREELLMAPI_CLOUD_BASE_URL$FREELLMAPI_CLOUD_API_KEY" ]; then
+          if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY" ] && { [ -z "$FREELLMAPI_CLOUD_BASE_URL" ] || [ -z "$FREELLMAPI_CLOUD_API_KEY" ]; }; then
             echo "Configure at least one LLM provider: FREELLMAPI_CLOUD_BASE_URL + FREELLMAPI_CLOUD_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY."
             exit 1
           fi
