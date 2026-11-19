@@ -20,7 +20,7 @@ class DocumentaryMediaError(RuntimeError):
 
 def _sentences(text: str) -> list[str]:
     import re
-    return [part.strip() for part in re.split(r"(?<=[.!?؟۔])\\s+", text.strip()) if part.strip()]
+    return [part.strip() for part in re.split(r"(?<=[.!?؟۔])\s+", text.strip()) if part.strip()]
 
 
 def _stamp(seconds: float) -> str:
