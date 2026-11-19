@@ -41,7 +41,8 @@ a ready-made audio file with `--narration-audio`.
 - No API requests are made by storyboard, planning, subtitle, or render commands.
 - Generation consumes account credits. Each submit command requires explicit
   paid-API acknowledgement and an interactive confirmation.
-- This version does not generate verified research or factual scripts. Piper TTS is an optional local engine requiring a downloaded voice model; check each model's license. The pipeline does not automatically choose a voice model. It does not yet generate
-  thumbnails, or publish to YouTube. Those are separate modules/integrations.
+- Automated research and fact-checking are not implemented; scripts must be reviewed and supplied by the user.
+- Piper TTS is an optional local engine requiring a downloaded voice model. Review each model's license and commercial-use terms; the pipeline does not automatically choose a voice.
+- Thumbnail generation and YouTube publishing are not implemented yet.
 - YouTube publishing remains deliberately out of scope until OAuth, quota handling,
   resumable uploads, channel confirmation, and a final human approval gate exist.
