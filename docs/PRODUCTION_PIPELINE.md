@@ -57,3 +57,14 @@ The JSON manifest is an ordered array of local clip paths; relative paths are re
 ### Optional FreeLLMAPI cloud route
 
 The LLM provider chain can use `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` before the existing providers. The adapter calls the gateway model catalogue first and accepts only explicit free markers or machine-readable zero input/output prices. Unknown pricing is not treated as free. This is the cloud endpoint only; it does not connect to the phone/Tailscale gateway. The credentials are optional and must be entered directly as Actions Secrets in this repository if available.
+
+
+## Long-form production blueprint (planning stage)
+
+Create a structured 15-, 30- or 60-minute production blueprint without starting paid services or uploading anything:
+
+```bash
+nextgen-academy documentary-plan --topic "How AI is changing scientific research" --minutes 15 --output output/documentary-plan.json
+```
+
+The planner allocates chapter time, narration word-count targets, and a shot list using 12-second (or shorter) visual slots. It produces a blueprint only: it does not claim to have written or fact-checked the full narration, generated clips, or rendered a documentary. At 12 seconds per slot, a 15-minute episode needs 75 slots, a 30-minute episode 150, and a 60-minute episode 300. This keeps provider limits visible before any media-generation request is made.
