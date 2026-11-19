@@ -6,16 +6,18 @@ from typing import Any
 from .llm import generate_json
 
 SYSTEM_PROMPT = """You are a careful technology documentary writer. Return JSON only.
-Schema: {"scenes":[{"title":"...","scene":"...","narration_en":"...","subtitle_fa":"..."}],
+Schema: {"scenes":[{"title":"...","scene":"...","narration_en":"...","subtitle_fa":"...","source_ids":["src1"]}],
 "claims":[{"text":"specific factual claim","source_ids":["src1"]}]}
 Create exactly the requested number of sequential scenes for a 16:9 documentary.
-Each scene represents 15 seconds and each English narration should contain 22-30 spoken words.
+Each scene represents 15 seconds. Keep English narration concise: aim for 22-26 spoken words,
+and never exceed 30 words so the voiceover is not cut off by the scene duration.
 Structure the documentary with a compelling hook, context, explanation, evidence, real-world applications,
 risks/limitations, open questions and a thoughtful conclusion. Avoid repetitive filler.
-Persian subtitles must faithfully translate each English narration. Use only information supported by
-the supplied source titles and summaries. Do not invent numbers, dates, quotes, studies or details.
-If sources are insufficient, use cautious framing and state uncertainty. Every factual claim must cite
-one or more supplied source IDs. Sources are discovery leads, not independently verified evidence."""
+Persian subtitles must faithfully translate each English narration. Every scene must include one or more
+source_ids from the supplied source list; every factual claim must also cite source_ids.
+Use only information supported by the supplied source titles and summaries. Do not invent numbers, dates,
+quotes, studies or details. If sources are insufficient, use cautious framing and state uncertainty.
+Sources are discovery leads, not independently verified evidence."""
 
 def draft_cloud_storyboard(topic: str, sources: list[dict[str, Any]], output_path: str | Path,
                            target_duration_seconds: int = 300) -> Path:
@@ -24,6 +26,7 @@ def draft_cloud_storyboard(topic: str, sources: list[dict[str, Any]], output_pat
     if target_duration_seconds not in range(180, 601, 60):
         raise ValueError("target_duration_seconds must be 180-600 in 60-second steps.")
     scene_count = target_duration_seconds // 15
+    source_ids = {s["id"] for s in sources}
     source_notes = [{"id": s["id"], "title": s["title"], "publisher": s["publisher"],
                      "url": s["url"], "published": s.get("published", ""),
                      "summary": s.get("summary", "")[:1000]} for s in sources]
@@ -34,7 +37,6 @@ def draft_cloud_storyboard(topic: str, sources: list[dict[str, Any]], output_pat
     scenes, claims = data.get("scenes"), data.get("claims")
     if not isinstance(scenes, list) or len(scenes) != scene_count:
         raise ValueError(f"Cloud model must return exactly {scene_count} scenes.")
-    source_ids = {s["id"] for s in sources}
     if not isinstance(claims, list):
         raise ValueError("Cloud model must return a claims array.")
     for i, scene in enumerate(scenes, 1):
@@ -42,8 +44,11 @@ def draft_cloud_storyboard(topic: str, sources: list[dict[str, Any]], output_pat
             if not str(scene.get(key, "")).strip():
                 raise ValueError(f"Scene {i} is missing {key}.")
         words = len(str(scene["narration_en"]).split())
-        if not 18 <= words <= 38:
-            raise ValueError(f"Scene {i} narration is {words} words; expected 18-38.")
+        if not 18 <= words <= 30:
+            raise ValueError(f"Scene {i} narration is {words} words; expected 18-30.")
+        refs = scene.get("source_ids", [])
+        if not isinstance(refs, list) or not refs or not set(refs).issubset(source_ids):
+            raise ValueError(f"Scene {i} refers to missing or invalid source IDs.")
     for claim in claims:
         refs = claim.get("source_ids", [])
         if not refs or not set(refs).issubset(source_ids):
