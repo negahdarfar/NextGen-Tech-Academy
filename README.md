@@ -51,22 +51,15 @@ Add credentials to the process environment or a local, ignored `.env` file. Neve
 
 See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorization and secure GitHub secret configuration.
 
-## OmniRoute integration (optional AI gateway)
+## OmniRoute integration (ephemeral GitHub Actions gateway)
 
-The LLM adapter can route script-generation requests through a self-hosted OmniRoute instance. This keeps the existing Gemini/Groq/OpenRouter adapters available as fallbacks and does not change the video-generation or YouTube-upload stages.
+The video factory starts OmniRoute directly on the GitHub-hosted runner for each job. It installs Node.js 22 and the pinned `omniroute@3.8.55` package, starts the API on loopback (`127.0.0.1:20128`), checks readiness, and runs the existing production pipeline. The runner is discarded after the job. No VPS, public gateway URL, always-on laptop, or Ollama installation is required.
 
-Add these GitHub Actions **Secrets** (never commit them):
-- `OMNIROUTE_BASE_URL` — public HTTPS base URL reachable from the GitHub-hosted runner, ending in `/v1` (for example, `https://ai-gateway.example.com/v1`). `localhost` and `127.0.0.1` will not work from GitHub-hosted runners.
-- `OMNIROUTE_API_KEY` — an API key created in OmniRoute Dashboard → Endpoints.
+The workflow reuses the existing `GEMINI_API_KEY` Actions secret as the upstream Gemini credential. The default OmniRoute model is `gemini/gemini-2.5-flash`; optionally override it with the `OMNIROUTE_MODEL` Actions variable after verifying provider availability and billing. No separate `OMNIROUTE_BASE_URL` or `OMNIROUTE_API_KEY` repository secrets are required for this local ephemeral mode.
 
-Optional GitHub Actions **Variables**:
-- `OMNIROUTE_MODEL` — defaults to `auto/subscription` (subscription-quota-only routing; it should fail closed rather than silently falling back to billable providers).
-- `LLM_PROVIDER_ORDER` — defaults to `omniroute,gemini,groq,openrouter`. Put or remove providers to change fallback order.
+**Cost warning:** OmniRoute does not grant free credits. Gemini free-tier eligibility and rate limits depend on the Google project; a billed project may incur charges. Confirm the account's billing settings before enabling scheduled runs. The existing Gemini/Groq/OpenRouter fallback chain remains configurable and may also incur costs depending on the provider account and model. For strict zero-cost operation, enable only provider/model routes whose no-charge status and hard-stop behavior have been verified.
 
-Connect at least one eligible provider in OmniRoute Dashboard → Providers, then create an endpoint key in Dashboard → Endpoints. For the no-surprise-cost default, use `auto/subscription` and confirm the connected provider's terms and quota. Do not use `auto`, `auto/cheap`, or a paid model unless you intentionally accept possible charges. OmniRoute does not grant free credits; provider free tiers, eligibility, regional access, and limits are controlled by each provider.
-
-See [OmniRoute setup and security notes](docs/OMNIROUTE_SETUP.md). If OmniRoute is unavailable, the existing LLM fallback chain continues to Gemini, Groq, and OpenRouter according to `LLM_PROVIDER_ORDER`.
-
+See [OmniRoute runner setup](docs/OMNIROUTE_SETUP.md) for implementation and verification details.
 ## YouTube publishing safeguards
 
 - OAuth refresh-token credentials are required; an API key alone cannot upload to a personal channel.
