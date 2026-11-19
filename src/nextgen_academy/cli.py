@@ -42,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_progress.add_argument("--output-path")
     run_progress.add_argument("--error")
 
+    chapter_work = sub.add_parser("documentary-chapter", help="research and draft one resumable documentary chapter")
+    chapter_work.add_argument("--state", default="output/documentary-run.json")
+    chapter_work.add_argument("--chapter", type=int, required=True)
+    chapter_work.add_argument("--output-dir", default="output/documentary")
+    chapter_work.add_argument("--force", action="store_true", help="deliberately regenerate an existing chapter")
+
     plan = sub.add_parser("plan", help="create a research/production plan")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
@@ -129,6 +135,13 @@ def main() -> int:
         chapter = next(item for item in state["chapters"] if item["chapter"] == args.chapter)
         print(json.dumps(chapter, ensure_ascii=False, indent=2))
         print(f"Run status: {state['status']}")
+        return 0
+
+    if args.command == "documentary-chapter":
+        from .documentary_chapters import process_documentary_chapter
+        result = process_documentary_chapter(args.state, args.chapter,
+                                             args.output_dir, force=args.force)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "plan":
