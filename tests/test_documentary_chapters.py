@@ -62,7 +62,7 @@ def test_invalid_claim_source_is_rejected(tmp_path, monkeypatch):
     monkeypatch.setattr(chapters, "generate_json", lambda *a, **k: {
         "narration_en": " ".join(["Evidence"] * 100), "subtitle_fa": "ترجمه",
         "claims": [{"text": "Unsupported", "source_ids": ["missing"]}],
-        "visual_shots": [{"visual_prompt": f"Shot {i}: cinematic science laboratory"} for i in range(4)],
+        "visual_shots": [{"visual_prompt": f"Shot {i}: cinematic science laboratory", "stock_search_query": "science laboratory robot"} for i in range(4)],
     })
     with pytest.raises(ValueError, match="invalid source IDs"):
         chapters.process_documentary_chapter(state, 1, tmp_path / "out")
