@@ -170,7 +170,7 @@ def assemble_documentary_run(state_path: str | Path,
             raise DocumentaryAssemblyError("Final video has no narration audio stream.")
         if not any(item.get("codec_type") == "subtitle" for item in streams):
             raise DocumentaryAssemblyError("Final video has no Persian subtitle stream.")
-        actual = _duration(ffprobe, output)
+        actual = _duration(ffprobe, temp_output)
         tolerance = max(30.0, target_seconds * 0.20)
         if target_seconds and abs(actual - target_seconds) > tolerance:
             temp_output.unlink(missing_ok=True)
