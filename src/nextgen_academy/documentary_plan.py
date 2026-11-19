@@ -58,21 +58,29 @@ def build_documentary_plan(topic: str, minutes: int = 15,
         })
         cursor += duration
 
-    shot_count = math.ceil(total_seconds / clip_seconds)
     shots = []
-    for index in range(shot_count):
-        start = index * clip_seconds
-        shots.append({
-            "shot": index + 1,
-            "start_seconds": start,
-            "duration_seconds": min(clip_seconds, total_seconds - start),
-            "chapter": next(ch["chapter"] for ch in chapters
-                            if ch["start_seconds"] <= start < ch["end_seconds"]),
-            "visual_brief": "",
-            "generation_status": "not_started",
-            "asset_path": None,
-            "source_or_license": None,
-        })
+    global_shot = 0
+    for chapter in chapters:
+        local_start = 0
+        chapter_shot = 0
+        while local_start < chapter["duration_seconds"]:
+            global_shot += 1
+            chapter_shot += 1
+            duration = min(clip_seconds, chapter["duration_seconds"] - local_start)
+            start_seconds = chapter["start_seconds"] + local_start
+            shots.append({
+                "shot": global_shot,
+                "chapter_shot": chapter_shot,
+                "start_seconds": start_seconds,
+                "duration_seconds": duration,
+                "chapter": chapter["chapter"],
+                "visual_brief": "",
+                "generation_status": "not_started",
+                "asset_path": None,
+                "source_or_license": None,
+            })
+            local_start += duration
+    shot_count = len(shots)
 
     return {
         "topic": clean_topic,
