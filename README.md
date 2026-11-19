@@ -13,7 +13,7 @@ Cloud-first AI video production and YouTube upload automation. The cloud pipelin
 
 The script writer uses a configurable fallback chain: Gemini, Groq and OpenRouter. Configure one or more API keys as GitHub Actions Secrets. Free-tier availability and model names can change; the app tries configured providers in order and reports a failure if all are unavailable.
 
-VidoGrid video models can be rotated using `VIDOGRID_MODEL_ROTATION`. The current default rotates Grok Imagine Video 1.5 Lite and Grok Imagine Video 1.5. VidoGrid API requests consume VidoGrid credits. The automation deliberately fails closed unless the account response exposes a separate free/trial credit balance and `VIDOGRID_CREDITS_PER_CLIP` is configured. The application will not guess that app-level free generations are available to the API.
+VidoGrid video models can be rotated using `VIDOGRID_MODEL_ROTATION`. The default rotation includes Grok Imagine Video 1.5 Lite, Veo 3.1 Fast and Omni 1.2 Flash. These models are routed through their documented VidoGrid endpoints. VidoGrid API requests consume VidoGrid credits. The automation deliberately fails closed unless the account response exposes a separate free/trial credit balance and `VIDOGRID_MODEL_CREDIT_COSTS` contains a cost for every selected model. The application will not guess that app-level free generations are available to the API.
 
 Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an external service and may be rate-limited or change; review its terms and voice usage rights before commercial use.
 
@@ -25,8 +25,9 @@ Cloud narration uses Edge TTS through the `cloud` optional dependency. It is an 
    - `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with the `youtube.upload` scope)
 2. Add repository **Actions variables** if needed:
    - `LLM_PROVIDER_ORDER` (default `gemini,groq,openrouter`)
-   - `VIDOGRID_MODEL_ROTATION` (default `grok-imagine-video-1.5-lite,grok-imagine-video-1.5`)
-3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_CREDITS_PER_CLIP` only after checking current pricing for the selected models.
+   - `VIDOGRID_MODEL_ROTATION` (default `grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash`)
+   - `VIDOGRID_MODEL_CREDIT_COSTS` (required JSON cost per model; exact account pricing)
+3. Confirm VidoGrid API pricing and the account's separately identified free/trial credit balance. Set `VIDOGRID_MODEL_CREDIT_COSTS` as a JSON object (for example, `{\"grok-imagine-video-1.5-lite\": 1, \"veo-3.1-fast\": 2, \"omni-1.2-flash\": 2}`) only after checking the exact current credit cost shown in your VidoGrid account. The numbers in this example are placeholders, not actual prices.
 4. Open **Actions → Automated YouTube video factory → Run workflow**. Supply a topic or leave it blank for RSS-based topic discovery.
 5. The workflow uploads privately by default and stores output artifacts for 14 days.
 
