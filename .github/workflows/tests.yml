@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feat/initial-project-foundation, feat/omniroute-integration]
+    branches: [main, feat/initial-project-foundation, feat/omniroute-integration, integration/agent-skills-and-pipeline]
   workflow_dispatch:
 
 concurrency:

@@ -5,7 +5,7 @@
 - [x] Environment configuration template
 - [x] Plan-only CLI
 - [x] Architecture and specialist-role documentation
-- [ ] CI workflow and baseline test run
+- [x] CI workflow and baseline test run (43 tests passed on the integration branch)
 
 ## Phase 1 — reliable content artifacts
 - [ ] Typed research-source model with URL, publisher, date, and evidence excerpt
@@ -35,3 +35,13 @@
 ## Acceptance criteria
 
 A phase is complete only when it has automated tests, documented configuration, failure handling, and a reproducible local run. A feature is not considered implemented merely because it appears in a roadmap or agent description.
+
+
+## Integration update — 2026-11-19
+- [x] Create a backup branch before consolidation.
+- [x] Vendor selected MIT-licensed YouTube editorial skills and CLI helpers (hook scoring, title/thumbnail lint, SEO, planning, chapters, edit decision lists, retention analysis, viral outlier analysis, channel audit).
+- [x] Add CI smoke tests for the vendored tools.
+- [x] Add a guarded long-form clip-assembly utility with manifest validation.
+- [ ] Convert the current one-minute pipeline into a fully sourced, resumable 15–60+ minute documentary workflow.
+- [ ] Validate long-form rendering, audio, subtitle sync, asset rights, and upload on a private test before any public release.
+- [ ] Review and reconcile remaining useful components from the other video repositories.

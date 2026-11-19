@@ -29,7 +29,7 @@ When no topic is supplied, RSS headlines are used to choose a topic. The automat
 
 - `AGNES_API_KEY` — optional AI video key. Free 720p promotion is limited-time and may change.
 - `PEXELS_API_KEY` — optional free stock fallback. Recommended alongside Agnes.
-- At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY` for cloud writing.
+- At least one LLM route: the optional `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` pair, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY` for cloud writing.
 - `YOUTUBE_TOKEN_JSON` for OAuth upload with the `youtube.upload` scope.
 
 At least one of `AGNES_API_KEY` or `PEXELS_API_KEY` is required for visual scenes. Never commit credentials.
@@ -42,3 +42,18 @@ OmniRoute may be used as an ephemeral gateway for LLM requests. It is not a sour
 - Public visibility is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is deliberately configured.
 - Review source contents, factual claims, translations, audio, model terms, stock licenses and final video before public release.
 - GitHub Actions minutes, storage and artifact quotas apply.
+
+## Long-form documentary assembly (new utility; not yet an automated factory)
+
+The main cloud workflow above still targets a one-minute 16:9 episode. It has not yet been converted into a fully automated 15–60+ minute documentary pipeline. To safely join already-produced clips into a longer sequence, the repository now includes `scripts/assemble_documentary.py`:
+
+```bash
+python scripts/assemble_documentary.py --clips output/documentary-clips.json --output output/documentary.mp4 --subtitles output/subtitles.fa.srt --voiceover output/narration.mp3
+```
+
+The JSON manifest is an ordered array of local clip paths; relative paths are resolved from the manifest file. The tool normalizes clips to 1920×1080/30fps, joins them in order, and can add a narration track and a soft Persian subtitle track. Add `--burn-subtitles` only when captions should be permanently burned into the picture. FFmpeg is required. This utility does not create long scripts, generate footage, translate subtitles, or upload/publish. It must be tested with real sample media before it is used in a scheduled workflow.
+
+
+### Optional FreeLLMAPI cloud route
+
+The LLM provider chain can use `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` before the existing providers. The adapter calls the gateway model catalogue first and accepts only explicit free markers or machine-readable zero input/output prices. Unknown pricing is not treated as free. This is the cloud endpoint only; it does not connect to the phone/Tailscale gateway. The credentials are optional and must be entered directly as Actions Secrets in this repository if available.

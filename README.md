@@ -31,7 +31,7 @@ Add repository Actions secrets:
 
 1. `AGNES_API_KEY` — preferred AI video provider (limited-time free promotion; check the provider console).
 2. `PEXELS_API_KEY` — free stock fallback (recommended).
-3. At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`.
+3. At least one LLM route: `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY`, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`.
 4. `YOUTUBE_TOKEN_JSON` — OAuth authorized-user JSON with the `youtube.upload` scope, only if uploading.
 
 Open Actions → Automated YouTube video factory → Run workflow. Supply a topic or leave it blank for RSS-based topic discovery. The workflow uploads privately by default and stores output artifacts for 14 days.
@@ -58,3 +58,15 @@ The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute t
 - Free API tiers and promotions vary by provider and can change.
 - Agnes Flash output is 720p and at most 12 seconds per generated clip; short clips are looped to match the storyboard timeline.
 - No public upload is enabled by default.
+
+
+## Editorial skills and long-form tooling
+
+Selected MIT-licensed YouTube editorial skills and their helper scripts are vendored under `.claude/skills/`; see [docs/AGENT_SKILLS.md](docs/AGENT_SKILLS.md) for their purpose, commands, license, and execution limits. GitHub Actions does not execute agent skill files automatically.
+
+The current automated production workflow remains a one-minute 16:9 episode. A separate [documentary clip assembler](scripts/assemble_documentary.py) can join existing clips with optional narration and Persian subtitles, but it is only an assembly utility—not yet an end-to-end long-form documentary generator. See [docs/PRODUCTION_PIPELINE.md](docs/PRODUCTION_PIPELINE.md).
+
+
+### Optional free-model gateway
+
+The LLM fallback chain can optionally use a cloud FreeLLMAPI-compatible endpoint through `FREELLMAPI_CLOUD_BASE_URL` and `FREELLMAPI_CLOUD_API_KEY`. It first inspects `GET /models` and calls only models explicitly marked free by their ID or structured catalogue pricing; unknown-price and paid models are skipped. This path does not use the Android phone or Tailscale. Secret values are not copied between repositories; configure the pair directly in the canonical repository's Actions Secrets if you want this optional route.
