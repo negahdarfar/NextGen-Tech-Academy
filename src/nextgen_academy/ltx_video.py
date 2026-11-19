@@ -133,7 +133,9 @@ class LTXClient:
             if temporary.stat().st_size < 100_000:
                 raise LTXError("LTX video download is unexpectedly small.")
             temporary.replace(path)
-        except Exception:
+        except Exception as exc:
             if temporary.exists():
                 temporary.unlink()
-            raise
+            if isinstance(exc, LTXError):
+                raise
+            raise LTXError(f"LTX video download failed: {exc}") from exc
