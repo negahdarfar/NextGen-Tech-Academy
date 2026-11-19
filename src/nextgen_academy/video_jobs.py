@@ -18,24 +18,39 @@ def submit_segments(
     provider: VideoProvider,
     manifest_path: str | Path,
 ) -> dict[str, Any]:
-    """Submit clips in order and persist after every accepted job.
-
-    Sequential submission limits accidental bursts and makes interruption
-    recoverable. Re-running this function with the same manifest is not
-    supported yet; inspect/resume from the saved manifest instead.
-    """
+    """Submit clips in order, skipping UUIDs already saved in the manifest."""
     target = Path(manifest_path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    manifest: dict[str, Any] = {
-        "provider": "vidogrid",
-        "status": "submitting",
-        "clip_duration_target_seconds": 15,
-        "jobs": [],
-    }
+
+    if target.exists():
+        manifest = json.loads(target.read_text(encoding="utf-8"))
+        if manifest.get("provider") != "vidogrid":
+            raise ValueError("manifest provider does not match VidoGrid")
+        existing = {int(job["index"]): job for job in manifest.get("jobs", [])}
+        expected = {segment.index: segment.prompt for segment in segments}
+        for index, job in existing.items():
+            if index not in expected or job.get("prompt") != expected[index]:
+                raise ValueError(
+                    "existing manifest does not match this storyboard; "
+                    "use a new manifest path"
+                )
+    else:
+        manifest = {
+            "provider": "vidogrid",
+            "status": "submitting",
+            "clip_duration_target_seconds": 15,
+            "jobs": [],
+        }
+        existing = {}
+
+    manifest["status"] = "submitting"
     _write_manifest(target, manifest)
+
     for segment in segments:
+        if segment.index in existing and existing[segment.index].get("job_uuid"):
+            continue
         response = provider.submit_video(segment.prompt)
-        manifest["jobs"].append({
+        job = {
             "index": segment.index,
             "title": segment.title,
             "duration_target_seconds": segment.duration_seconds,
@@ -43,8 +58,15 @@ def submit_segments(
             "job_uuid": response["uuid"],
             "provider_response": response,
             "status": "queued",
-        })
+        }
+        manifest["jobs"] = [
+            item for item in manifest["jobs"] if int(item["index"]) != segment.index
+        ]
+        manifest["jobs"].append(job)
+        manifest["jobs"].sort(key=lambda item: int(item["index"]))
+        existing[segment.index] = job
         _write_manifest(target, manifest)
+
     manifest["status"] = "submitted"
     _write_manifest(target, manifest)
     return manifest
