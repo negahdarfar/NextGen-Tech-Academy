@@ -14,6 +14,12 @@ Requires Python 3.10+ and FFmpeg on PATH.
 python -m pip install -e ".[dev]"
 ```
 
+For local Piper voice synthesis, install the optional voice dependency:
+
+```bash
+python -m pip install -e ".[voice]"
+```
+
 Copy `.env.example` to `.env` and add your VidoGrid API key locally. Never commit the key.
 
 ## One-minute workflow
