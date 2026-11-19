@@ -112,6 +112,7 @@ def assemble_documentary_run(state_path: str | Path,
     with tempfile.TemporaryDirectory(prefix="nextgen-longform-") as temp:
         work = Path(temp)
         video_files, audio_files, subtitle_blocks = [], [], []
+        chapter_timeline = []
         timeline_offset = 0.0
         cue_index = 0
         for chapter, audio, subtitles, shots in chapter_inputs:
@@ -133,6 +134,13 @@ def assemble_documentary_run(state_path: str | Path,
                 video_files.append(normalized)
             blocks, cue_index = _parse_srt(subtitles, timeline_offset, cue_index)
             subtitle_blocks.extend(blocks)
+            chapter_timeline.append({
+                "chapter": int(chapter["chapter"]),
+                "title": chapter["title"],
+                "start_seconds": round(timeline_offset, 3),
+                "end_seconds": round(timeline_offset + chapter_duration, 3),
+                "duration_seconds": round(chapter_duration, 3),
+            })
             timeline_offset += chapter_duration
 
         concat_video = work / "video-list.txt"
@@ -153,6 +161,8 @@ def assemble_documentary_run(state_path: str | Path,
               "-c:s", "mov_text", "-movflags", "+faststart", "-shortest", str(temp_output)])
 
     try:
+        if not temp_output.is_file() or temp_output.stat().st_size < 1024:
+            raise DocumentaryAssemblyError("FFmpeg did not create a valid temporary documentary file.")
         probe_raw = _run([ffprobe, "-v", "error", "-show_entries",
                           "stream=codec_type,width,height,avg_frame_rate:format=duration",
                           "-of", "json", str(temp_output)])
@@ -191,7 +201,7 @@ def assemble_documentary_run(state_path: str | Path,
         )
     return {"status": "assembled_pending_human_review", "output": str(output),
             "duration_seconds": round(actual, 2), "target_duration_seconds": target_seconds,
-            "chapter_count": len(chapter_inputs), "visual_shot_count": len(video_files),
+            "chapter_count": len(chapter_inputs), "visual_shot_count": len(video_files),\n            "chapter_timeline": chapter_timeline,
             "resolution": "1920x1080", "frame_rate": 30,
             "subtitle_track": "Persian soft subtitle (SRT converted to mov_text)",
             "public_upload": False, "human_review_required": True}
