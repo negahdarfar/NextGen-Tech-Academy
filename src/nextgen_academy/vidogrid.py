@@ -34,41 +34,43 @@ class VidoGridSettings:
 
     @classmethod
     def from_env(cls) -> "VidoGridSettings":
-        _load_local_env()
-        api_key = os.getenv("VIDOGRID_API_KEY", "").strip()
+        env = _load_local_env()
+        api_key = env.get("VIDOGRID_API_KEY", "").strip()
         if not api_key:
             raise ValueError("VIDOGRID_API_KEY is required for VidoGrid operations")
-        endpoint = os.getenv("VIDOGRID_ENDPOINT", DEFAULT_VIDEO_ENDPOINT).strip()
+        endpoint = env.get("VIDOGRID_ENDPOINT", DEFAULT_VIDEO_ENDPOINT).strip()
         if not endpoint.startswith("/video-gen/"):
             raise ValueError("VIDOGRID_ENDPOINT must be a /video-gen/ path")
-        duration = int(os.getenv("VIDOGRID_DURATION_SECONDS", "15"))
+        duration = int(env.get("VIDOGRID_DURATION_SECONDS", "15"))
         if not 1 <= duration <= 15:
             raise ValueError("VIDOGRID_DURATION_SECONDS must be between 1 and 15")
         return cls(
             api_key=api_key,
-            base_url=os.getenv("VIDOGRID_BASE_URL", API_BASE_URL).strip().rstrip("/"),
+            base_url=env.get("VIDOGRID_BASE_URL", API_BASE_URL).strip().rstrip("/"),
             endpoint=endpoint,
-            model=os.getenv("VIDOGRID_MODEL", "grok-imagine-video-1.5-lite").strip(),
+            model=env.get("VIDOGRID_MODEL", "grok-imagine-video-1.5-lite").strip(),
             duration_seconds=duration,
-            aspect_ratio=os.getenv("VIDOGRID_ASPECT_RATIO", "16:9").strip(),
-            resolution=os.getenv("VIDOGRID_RESOLUTION", "720p").strip(),
+            aspect_ratio=env.get("VIDOGRID_ASPECT_RATIO", "16:9").strip(),
+            resolution=env.get("VIDOGRID_RESOLUTION", "720p").strip(),
         )
 
 
-def _load_local_env() -> None:
-    """Load simple KEY=VALUE entries from .env without overriding real env vars."""
+def _load_local_env() -> dict[str, str]:
+    """Read simple KEY=VALUE entries from .env; process env takes precedence."""
+    values: dict[str, str] = {}
     env_path = Path(".env")
-    if not env_path.is_file():
-        return
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
+    if env_path.is_file():
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key:
+                values[key] = value
+    values.update(os.environ)
+    return values
 
 
 class VidoGridClient:
