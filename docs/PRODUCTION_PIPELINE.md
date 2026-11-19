@@ -7,26 +7,39 @@ The production target is a standard 16:9 YouTube documentary, selectable from 3 
 Open **Actions → Automated YouTube documentary factory → Run workflow** or use the schedule (Tuesday and Friday, 06:17 UTC).
 
 1. Discover a technology topic when no topic is supplied and collect up to 20 RSS research leads.
-2. Ask the configured cloud LLM to draft 12-40 ordered scenes, English narration and Persian translations (15 seconds per scene).
+2. Ask the configured cloud LLM to draft 12-40 ordered scenes, English narration and Persian translations (15 seconds per scene). Every scene must cite known source IDs.
 3. Retrieve matching landscape footage from Pexels and record creator/source attribution.
 4. Generate English narration with Edge TTS, normalizing each scene to 15 seconds.
 5. Loop/trim each stock clip to the target scene length, assemble with FFmpeg and mux narration plus Persian subtitles.
 6. Validate the rendered duration against the requested 3-10 minute target.
 7. Generate YouTube title, description, tags, chapters and thumbnail prompt.
-8. Preserve production files as an Actions artifact. Upload is optional for manual runs and private-only by default.
+8. Run the pinned MIT-licensed local highlight extractor on the completed MP4. Faster-Whisper transcribes the English narration, Gemini ranks engaging moments, and FFmpeg/OpenCV renders 3, 5 or 8 vertical MP4 clips.
+9. Preserve all production files as an Actions artifact. Manual master upload is optional and private-only; scheduled master uploads are private. Shorts are artifacts only, not auto-published.
 
 ## Required GitHub Actions secrets
 
-- `GEMINI_API_KEY` (or another configured cloud LLM key)
+- `GEMINI_API_KEY` (required for cloud script generation and highlight ranking)
 - `PEXELS_API_KEY` (Pexels API key; VidoGrid is not used)
-- `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with `youtube.upload` scope, required only for upload)
+- `YOUTUBE_TOKEN_JSON` (OAuth authorized-user JSON with `youtube.upload` scope, required only for master upload)
 
 Optional Actions variables: `LLM_PROVIDER_ORDER` and `OPENROUTER_MODEL`.
+
+## Outputs
+
+- `output/final-video.mp4`: 16:9 documentary master
+- `output/persian.srt`: Persian subtitle file
+- `output/narration.wav`: English voiceover
+- `output/storyboard.json`: bilingual scene script and source references
+- `output/stock-footage-sources.json`: Pexels creator and source attribution
+- `output/youtube-package.json`: draft metadata and chapter markers
+- `output/shorts/short_*.mp4`: ranked vertical highlights
+- `output/shorts/clip-report.json`: transcript and highlight scores
 
 ## Safeguards and limitations
 
 - Pexels footage is real stock footage, not AI-generated video. It is illustrative B-roll and may not exactly depict each narrated event.
-- Pexels API limits, Gemini free-tier quotas and GitHub Actions usage limits apply; this is not unlimited free compute.
+- Pexels API limits, Gemini free-tier quotas, Hugging Face model download and GitHub Actions usage limits apply; this is not unlimited free compute.
 - RSS results are discovery leads, not fact-checked primary evidence. Review all claims and source links.
-- Manual upload defaults off. When enabled, upload is private. Public publishing remains disabled in the workflow.
-- Automated tests do not validate live Pexels availability, TTS, OAuth or an actual YouTube upload. Supervise the first end-to-end run.
+- Manual upload defaults off. When enabled, the master video uploads privately. Public publishing remains disabled in the workflow.
+- The clipper uses local CPU Whisper and Gemini for highlight ranking; its first model download and run can take several minutes.
+- Automated tests do not validate live Pexels availability, TTS, OAuth, model downloads or an actual YouTube upload. Supervise the first end-to-end run.
