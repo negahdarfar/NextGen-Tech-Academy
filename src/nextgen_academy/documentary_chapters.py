@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .documentary_state import STAGES, load_run_state, update_chapter_state
+from .documentary_state import load_run_state, update_chapter_state
 from .llm import generate_json
 from .research import discover_sources
 
@@ -17,16 +17,21 @@ The English narration must be natural voiceover prose. The Persian text must fai
 the complete English narration, not summarize it. Do not invent facts, numbers, dates, quotations,
 or study findings. Every verifiable factual claim must cite one or more supplied source IDs.
 Sources are discovery leads, not independently verified evidence. Clearly qualify uncertainty.
-Do not include headings, markdown fences, or production directions in narration.\nAlso return exactly the requested number of distinct visual_shots. Each visual_prompt must describe a concrete cinematic 16:9 shot, with subject, setting, action, camera movement and continuity. No text overlays, logos, or watermarks."""
+Do not include headings, markdown fences, or production directions in narration.
+Return exactly the requested number of distinct visual_shots. Each visual_prompt must describe a
+concrete cinematic 16:9 shot, with subject, setting, action, camera movement and continuity.
+No text overlays, logos, or watermarks."""
 
 
-def process_documentary_chapter(state_path: str | Path, chapter_number: int,
-                                output_dir: str | Path = "output/documentary",
-                                force: bool = False) -> dict[str, Any]:
+def process_documentary_chapter(
+    state_path: str | Path,
+    chapter_number: int,
+    output_dir: str | Path = "output/documentary",
+    force: bool = False,
+) -> dict[str, Any]:
     """Research and draft one chapter; saved chapters are skipped unless force is explicit."""
     state = load_run_state(state_path)
-    chapter = next((item for item in state["chapters"]
-                    if item["chapter"] == chapter_number), None)
+    chapter = next((item for item in state["chapters"] if int(item["chapter"]) == chapter_number), None)
     if chapter is None:
         raise ValueError(f"Unknown chapter number: {chapter_number}")
     current = chapter["status"]
@@ -48,25 +53,40 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         if len(sources) < 2:
             raise RuntimeError("At least two source leads are required before drafting a chapter.")
         research_payload = {
-            "topic": state["topic"], "chapter": chapter_number,
-            "chapter_title": chapter["title"], "query": topic_query,
+            "topic": state["topic"],
+            "chapter": chapter_number,
+            "chapter_title": chapter["title"],
+            "query": topic_query,
             "sources": sources,
             "verification_note": "RSS discovery leads only; sources and claims require human verification.",
         }
         _write_json(research_path, research_payload)
-        update_chapter_state(state_path, chapter_number, status="researched",
-                             outputs={"research": str(research_path)}, force=force)
+        update_chapter_state(
+            state_path, chapter_number, status="researched",
+            outputs={"research": str(research_path)}, force=force,
+        )
     else:
         research_payload = json.loads(research_path.read_text(encoding="utf-8"))
         sources = research_payload["sources"]
 
     source_notes = [
-        {"id": item["id"], "title": item["title"], "publisher": item["publisher"],
-         "url": item["url"], "published": item.get("published", ""),
-         "summary": item.get("summary", "")[:1200]}
+        {
+            "id": item["id"],
+            "title": item["title"],
+            "publisher": item["publisher"],
+            "url": item["url"],
+            "published": item.get("published", ""),
+            "summary": item.get("summary", "")[:1200],
+        }
         for item in sources
     ]
     words = int(chapter["target_narration_words"])
+    clip_seconds = int(chapter.get(
+        "visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)
+    ))
+    if clip_seconds not in (4, 6, 8, 10, 12):
+        raise ValueError("visual_clip_target_seconds must be 4, 6, 8, 10, or 12.")
+    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds
     user_prompt = (
         f"Documentary topic: {state['topic']}\n"
         f"Chapter {chapter_number}: {chapter['title']}\n"
@@ -75,15 +95,15 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         f"{max(50, int(words * 0.8))}–{int(words * 1.2)} words).\n"
         "Write this chapter as part of one continuous documentary. Avoid repeating a generic "
         "introduction or conclusion unless this is the opening or final chapter.\n"
+        f"Return exactly {shot_count} visual_shots, each designed for a {clip_seconds}-second clip.\n"
         "Source notes (use only these for factual claims):\n"
         + json.dumps(source_notes, ensure_ascii=False)
     )
-    clip_seconds = int(chapter.get("visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)))
-    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds
-    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
+    data = generate_json(SYSTEM_PROMPT, user_prompt)
     narration = str(data.get("narration_en", "")).strip()
     translation = str(data.get("subtitle_fa", "")).strip()
-    claims = data.get("claims")\n    visual_shots = data.get("visual_shots")
+    claims = data.get("claims")
+    visual_shots = data.get("visual_shots")
     if not narration or not translation or not isinstance(claims, list):
         raise ValueError("Model output must include narration_en, subtitle_fa and claims.")
     if not isinstance(visual_shots, list) or len(visual_shots) != shot_count:
@@ -91,6 +111,7 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
     for index, shot in enumerate(visual_shots, 1):
         if not isinstance(shot, dict) or not str(shot.get("visual_prompt", "")).strip():
             raise ValueError(f"Visual shot {index} is missing visual_prompt.")
+
     word_count = len(narration.split())
     if not max(50, int(words * 0.65)) <= word_count <= int(words * 1.35):
         raise ValueError(f"Chapter narration has {word_count} words; target is about {words}.")
@@ -103,20 +124,35 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
             raise ValueError("A factual claim refers to missing or invalid source IDs.")
 
     payload = {
-        "topic": state["topic"], "chapter": chapter_number,
-        "title": chapter["title"], "duration_seconds": chapter["duration_seconds"],
-        "target_narration_words": words, "actual_narration_words": word_count,
-        "narration_en": narration, "subtitle_fa": translation,
-        "claims": claims, "sources": sources, "visual_shots": visual_shots,
+        "topic": state["topic"],
+        "chapter": chapter_number,
+        "title": chapter["title"],
+        "duration_seconds": chapter["duration_seconds"],
+        "target_narration_words": words,
+        "actual_narration_words": word_count,
+        "narration_en": narration,
+        "subtitle_fa": translation,
+        "claims": claims,
+        "sources": sources,
+        "visual_shots": visual_shots,
         "visual_clip_target_seconds": clip_seconds,
         "review_required": True,
     }
     _write_json(script_path, payload)
-    update_chapter_state(state_path, chapter_number, status="scripted",
-                         outputs={"script": str(script_path)})
-    return {"chapter": chapter_number, "status": "scripted", "skipped": False,
-            "research_path": str(research_path), "script_path": str(script_path),
-            "word_count": word_count, "source_count": len(sources)}
+    update_chapter_state(
+        state_path, chapter_number, status="scripted",
+        outputs={"script": str(script_path)},
+    )
+    return {
+        "chapter": chapter_number,
+        "status": "scripted",
+        "skipped": False,
+        "research_path": str(research_path),
+        "script_path": str(script_path),
+        "word_count": word_count,
+        "source_count": len(sources),
+        "visual_shot_count": shot_count,
+    }
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
