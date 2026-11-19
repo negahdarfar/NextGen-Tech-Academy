@@ -17,7 +17,7 @@ def default_storyboard(topic: str) -> list[dict[str, str]]:
         ("The mechanism", f"Visualize how {topic} works, with clear close-up details."),
         ("The future", f"Show realistic implications and end with a memorable wide shot about {topic}."),
     ]
-    return [{"title": title, "scene": scene, "narration": ""} for title, scene in beats]
+    return [{"title": title, "scene": scene, "narration_en": "", "subtitle_fa": ""} for title, scene in beats]
 
 
 def save_script_package(topic: str, scenes: list[dict[str, str]], target: str | Path) -> Path:
@@ -30,7 +30,7 @@ def save_script_package(topic: str, scenes: list[dict[str, str]], target: str | 
         "clip_duration_seconds": 15,
         "language": {"narration": "English", "subtitles": "Persian"},
         "scenes": scenes,
-        "editorial_note": "Replace empty narration with fact-checked English lines and Persian subtitle translations before production.",
+        "editorial_note": "Fill narration_en with fact-checked English narration and subtitle_fa with its Persian translation before production.",
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
