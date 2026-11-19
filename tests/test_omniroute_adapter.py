@@ -48,5 +48,15 @@ class OmniRouteAdapterTests(unittest.TestCase):
             llm._omniroute("system", "user")
 
 
+    @patch.dict(os.environ, {
+        "OMNIROUTE_BASE_URL": "http://127.0.0.1:20128/v1",
+        "OMNIROUTE_MODEL": "gemini/gemini-2.5-flash",
+    }, clear=True)
+    @patch("nextgen_academy.llm._post")
+    def test_ephemeral_runner_can_call_loopback_without_persisted_key(self, post):
+        post.return_value = {"choices": [{"message": {"content": "{}"}}]}
+        llm._omniroute("system", "user")
+        self.assertNotIn("Authorization", post.call_args.args[2])
+
 if __name__ == "__main__":
     unittest.main()
