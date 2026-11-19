@@ -4,15 +4,15 @@ import json, shutil, subprocess
 from pathlib import Path
 from typing import Any
 
-class PipelineError(RuntimeError):
-    pass
+class PipelineError(RuntimeError): pass
 
 def render_video(jobs_manifest: str | Path, output_file: str | Path,
-                 subtitles: str | Path | None = None,
-                 narration_audio: str | Path | None = None) -> Path:
+                 subtitles: str | Path | None = None, narration_audio: str | Path | None = None,
+                 scene_duration: int = 15) -> Path:
     manifest=json.loads(Path(jobs_manifest).read_text(encoding="utf-8"))
     jobs=sorted(manifest.get("jobs",[]),key=lambda item:int(item["index"]))
-    if len(jobs)!=4: raise PipelineError("The one-minute preset requires exactly four stock clips.")
+    if not 12 <= len(jobs) <= 40: raise PipelineError("A documentary must contain 12-40 scenes (3-10 minutes).")
+    if not 5 <= scene_duration <= 60: raise PipelineError("scene_duration must be 5-60 seconds.")
     ffmpeg=shutil.which("ffmpeg")
     if not ffmpeg: raise PipelineError("FFmpeg was not found.")
     output=Path(output_file); output.parent.mkdir(parents=True,exist_ok=True)
@@ -22,7 +22,7 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
         source=Path(job.get("local_path",""))
         if not source.is_file(): raise PipelineError(f"Missing stock clip: {source}")
         target=work/f"clip_{int(job['index']):03d}.mp4"
-        _run([ffmpeg,"-y","-i",str(source),"-t","15","-an","-vf",
+        _run([ffmpeg,"-y","-stream_loop","-1","-i",str(source),"-t",str(scene_duration),"-an","-vf",
               "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
               "-c:v","libx264","-preset","veryfast","-crf","21","-movflags","+faststart",str(target)])
         normalized.append(target)
@@ -30,8 +30,7 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
     concat.write_text("".join(f"file '{p.as_posix()}'\n" for p in normalized),encoding="utf-8")
     joined=work/"joined.mp4"
     _run([ffmpeg,"-y","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(joined)])
-    inputs=["-i",str(joined)]
-    audio_idx=None; sub_idx=None
+    inputs=["-i",str(joined)]; audio_idx=None; sub_idx=None
     if narration_audio:
         audio=Path(narration_audio)
         if not audio.is_file(): raise PipelineError(f"Narration audio not found: {audio}")
@@ -48,7 +47,7 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
     _run(cmd)
     return output
 
-def validate_render_duration(video_path: str | Path, minimum_seconds: float=55.0, maximum_seconds: float=70.0) -> float:
+def validate_render_duration(video_path: str | Path, minimum_seconds: float=175.0, maximum_seconds: float=610.0) -> float:
     ffprobe=shutil.which("ffprobe")
     if not ffprobe: raise PipelineError("ffprobe was not found.")
     result=subprocess.run([ffprobe,"-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",str(video_path)],capture_output=True,text=True)
