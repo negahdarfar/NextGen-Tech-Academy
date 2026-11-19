@@ -73,6 +73,18 @@ nextgen-academy documentary-progress --chapter 2 --error "Temporary provider fai
 
 Stages are `planned → researched → scripted → narrated → assembled → reviewed`. Skipping or moving backwards is blocked by default. Re-initialization refuses to overwrite an existing run manifest. Writes use an atomic replace so an interrupted save does not leave a partially-written JSON file. When every chapter is reviewed, the run is marked `ready_for_human_approval`; this is not permission to publish publicly. These commands track state only and do not yet run the chapter research, writing, narration, or media-generation stages automatically.
 
+### Chapter-by-chapter research and bilingual script drafting
+
+Configure at least one supported cloud LLM route and then run a single chapter:
+
+```bash
+nextgen-academy documentary-chapter --state output/documentary-run.json --chapter 1 --output-dir output/documentary
+```
+
+This command discovers RSS source leads for the documentary topic and chapter, saves the source list, drafts English narration plus a faithful Persian translation, validates the requested narration length and source IDs attached to claims, then records the script path in the run manifest. If drafting fails after research, the chapter remains at the researched stage and can be retried without repeating research. A chapter with a saved script is skipped on subsequent runs unless `--force` is deliberately supplied.
+
+This is the first connected chapter-production stage; narration audio, timed subtitles, video generation, assembly and automated long-form upload remain separate stages and are not implied to be complete. RSS items are leads, not fact-checked sources. Human source verification and editorial review remain mandatory.
+
 ### Optional FreeLLMAPI cloud route
 
 The LLM provider chain can use `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` before the existing providers. The adapter calls the gateway model catalogue first and accepts only explicit free markers or machine-readable zero input/output prices. Unknown pricing is not treated as free. This is the cloud endpoint only; it does not connect to the phone/Tailscale gateway. The credentials are optional and must be entered directly as Actions Secrets in this repository if available.
