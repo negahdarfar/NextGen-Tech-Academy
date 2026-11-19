@@ -11,7 +11,7 @@ from .cloud_writer import draft_cloud_storyboard
 from .research import discover_sources
 from .script import storyboard_subtitles
 from .video_jobs import submit_segments
-from .video_pipeline import poll_and_download, render_video
+from .video_pipeline import poll_and_download, render_video, validate_render_duration
 from .video_segments import build_segments, segments_as_dicts
 from .vidogrid import VidoGridClient, VidoGridSettings
 from .youtube_package import build_youtube_package
@@ -62,6 +62,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
     )
     render_video(jobs_path, root / "final-video.mp4",
                  root / "persian.srt", root / "narration.wav")
+    actual_duration = validate_render_duration(root / "final-video.mp4")
 
     package_path = build_youtube_package(storyboard_path, root / "youtube-package.json")
     package = json.loads(package_path.read_text(encoding="utf-8"))
@@ -80,6 +81,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         "video": str(root / "final-video.mp4"),
         "metadata": str(package_path),
         "source_count": len(sources),
+        "render_duration_seconds": actual_duration,
         "youtube_uploaded": False,
         "privacy_status": "not_uploaded",
     }
