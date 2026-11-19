@@ -25,10 +25,16 @@ def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
                                          os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
                                          system_prompt, user_prompt)
             elif provider == "openrouter" and os.getenv("OPENROUTER_API_KEY"):
+                model = os.getenv("OPENROUTER_MODEL", "").strip()
+                if not model:
+                    continue
+                if not model.endswith(":free") and os.getenv("ALLOW_PAID_LLM", "").lower() != "true":
+                    raise LLMError(
+                        "OpenRouter model is not marked :free. Configure a free model or explicitly set ALLOW_PAID_LLM=true."
+                    )
                 raw = _openai_compatible("https://openrouter.ai/api/v1/chat/completions",
                                          os.environ["OPENROUTER_API_KEY"],
-                                         os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
-                                         system_prompt, user_prompt)
+                                         model, system_prompt, user_prompt)
             else:
                 continue
             return _parse_json(raw)
