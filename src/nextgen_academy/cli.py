@@ -12,10 +12,8 @@ from .planning import build_plan, plan_as_dict
 from .script import default_storyboard, save_script_package, storyboard_subtitles
 from .script_review import write_review_report
 from .tts import synthesize_storyboard
-from .video_jobs import submit_segments
 from .video_pipeline import poll_and_download, render_video
 from .video_segments import VideoSegment, build_segments, segments_as_dicts
-from .vidogrid import VidoGridClient, VidoGridSettings
 from .youtube_package import build_youtube_package
 
 
@@ -50,17 +48,6 @@ def build_parser() -> argparse.ArgumentParser:
     clips.add_argument("--style", default="cinematic documentary, realistic detail, natural motion")
     clips.add_argument("--output", default="output/video-plan.json")
 
-    submit = sub.add_parser("video-submit", help="submit clips to VidoGrid after free-credit budget validation and interactive confirmation")
-    submit.add_argument("--manifest", default="output/video-plan.json")
-    submit.add_argument("--jobs-output", default="output/vidogrid-jobs.json")
-    submit.add_argument("--confirm-paid-api", action="store_true")
-
-    download = sub.add_parser("video-download", help="poll VidoGrid and download completed clips")
-    download.add_argument("--jobs-manifest", default="output/vidogrid-jobs.json")
-    download.add_argument("--output-dir", default="output/clips")
-    download.add_argument("--timeout", type=int, default=1800)
-    download.add_argument("--poll-interval", type=int, default=8)
-
     render = sub.add_parser("video-render", help="join downloaded clips into a final MP4")
     render.add_argument("--jobs-manifest", default="output/vidogrid-jobs.json")
     render.add_argument("--output", default="output/final-video.mp4")
@@ -84,8 +71,6 @@ def build_parser() -> argparse.ArgumentParser:
     review = sub.add_parser("script-check", help="check script completeness, sources and claim references")
     review.add_argument("--storyboard", default="output/storyboard.json")
     review.add_argument("--output", default="output/script-review.json")
-
-    account = sub.add_parser("vidogrid-account", help="inspect VidoGrid account and credit response without generating")
 
     auto = sub.add_parser("auto-run", help="run cloud production without Ollama")
     auto.add_argument("--topic", default="", help="leave blank for automatic RSS topic discovery")
@@ -153,34 +138,6 @@ def main() -> int:
         print(f"Created 4 linked clips (target 60 seconds): {target}")
         return 0
 
-    if args.command == "video-submit":
-        if not args.confirm_paid_api:
-            raise SystemExit("API may consume credits. Add --confirm-paid-api to acknowledge.")
-        payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-        segments = [VideoSegment(**item) for item in payload["segments"]]
-        client = VidoGridClient(VidoGridSettings.from_env())
-        account = client.account()
-        from .automation import _require_free_credit_budget
-        _require_free_credit_budget(
-            account,
-            models=[client.settings.model] * len(segments),
-        )
-        print("VidoGrid free-credit balance check passed:")
-        print(json.dumps(account, ensure_ascii=False, indent=2))
-        if input("Submit these 4 clips using the verified free-credit budget? [y/N] ").strip().lower() != "y":
-            print("Cancelled; no generation jobs were sent.")
-            return 0
-        manifest = submit_segments(segments, client, args.jobs_output)
-        print(f"Accepted job records: {len(manifest['jobs'])}; manifest: {args.jobs_output}")
-        return 0
-
-    if args.command == "video-download":
-        client = VidoGridClient(VidoGridSettings.from_env())
-        manifest = poll_and_download(client, args.jobs_manifest, args.output_dir,
-                                     args.timeout, args.poll_interval)
-        print(f"Downloaded {len(manifest['jobs'])} clips to {args.output_dir}")
-        return 0
-
     if args.command == "video-render":
         path = render_video(args.jobs_manifest, args.output, args.subtitles,
                             args.narration_audio)
@@ -207,11 +164,6 @@ def main() -> int:
         report = write_review_report(args.storyboard, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 1
-
-    if args.command == "vidogrid-account":
-        client = VidoGridClient(VidoGridSettings.from_env())
-        print(json.dumps(client.account(), ensure_ascii=False, indent=2))
-        return 0
 
     if args.command == "auto-run":
         from .automation import run_automated
