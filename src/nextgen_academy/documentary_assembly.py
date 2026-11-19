@@ -120,7 +120,7 @@ def assemble_documentary_run(state_path: str | Path,
             clip_duration = chapter_duration / len(shots)
             normalized_audio = work / f"audio-{chapter['chapter']:02d}.wav"
             _run([ffmpeg, "-y", "-i", str(audio), "-vn", "-ac", "2", "-ar", "48000",
-                  "-c:a", "pcm_s16le", str(normalized_audio)])
+                  "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",\n                  "-c:a", "pcm_s16le", str(normalized_audio)])
             audio_files.append(normalized_audio)
             for shot_index, shot in enumerate(shots, 1):
                 clip = Path(shot["local_path"])
@@ -158,13 +158,13 @@ def assemble_documentary_run(state_path: str | Path,
         _run([ffmpeg, "-y", "-i", str(silent), "-i", str(full_audio), "-i", str(srt),
               "-map", "0:v:0", "-map", "1:a:0", "-map", "2:0",
               "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-              "-c:s", "mov_text", "-movflags", "+faststart", "-shortest", str(temp_output)])
+              "-c:s", "mov_text", "-metadata:s:s:0", "language=fas",\n              "-metadata:s:s:0", "title=Persian", "-movflags", "+faststart", "-shortest", str(temp_output)])
 
     try:
         if not temp_output.is_file() or temp_output.stat().st_size < 1024:
             raise DocumentaryAssemblyError("FFmpeg did not create a valid temporary documentary file.")
         probe_raw = _run([ffprobe, "-v", "error", "-show_entries",
-                          "stream=codec_type,width,height,avg_frame_rate:format=duration",
+                          "stream=codec_type,width,height,avg_frame_rate,sample_rate,channels:format=duration",
                           "-of", "json", str(temp_output)])
         try:
             probe_data = json.loads(probe_raw)
@@ -176,8 +176,11 @@ def assemble_documentary_run(state_path: str | Path,
             raise DocumentaryAssemblyError("Final video failed the 1920x1080 resolution check.")
         if video_stream.get("avg_frame_rate") not in {"30/1", "30000/1001"}:
             raise DocumentaryAssemblyError("Final video failed the 30fps frame-rate check.")
-        if not any(item.get("codec_type") == "audio" for item in streams):
+        audio_stream = next((item for item in streams if item.get("codec_type") == "audio"), None)
+        if not audio_stream:
             raise DocumentaryAssemblyError("Final video has no narration audio stream.")
+        if audio_stream.get("sample_rate") != "48000" or audio_stream.get("channels") != 2:
+            raise DocumentaryAssemblyError("Final narration audio must be stereo 48kHz.")
         if not any(item.get("codec_type") == "subtitle" for item in streams):
             raise DocumentaryAssemblyError("Final video has no Persian subtitle stream.")
         actual = _duration(ffprobe, temp_output)
