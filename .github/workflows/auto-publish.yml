@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --global omniroute@3.8.54 || { echo 'OmniRoute install failed; direct LLM fallback will be used.'; exit 0; }
+          OMNIROUTE_SKIP_POSTINSTALL=1 npm install --global omniroute@3.8.54 || { echo 'OmniRoute install failed; direct LLM fallback will be used.'; exit 0; }
           export DATA_DIR="$RUNNER_TEMP/omniroute-data"
           export NODE_ENV=production
           export HOSTNAME=127.0.0.1
