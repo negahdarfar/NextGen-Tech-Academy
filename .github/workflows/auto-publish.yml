@@ -33,6 +33,7 @@ jobs:
       LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'gemini,groq,openrouter' }}
       VIDOGRID_API_KEY: ${{ secrets.VIDOGRID_API_KEY }}
       VIDOGRID_MODEL_ROTATION: ${{ vars.VIDOGRID_MODEL_ROTATION || 'grok-imagine-video-1.5-lite,grok-imagine-video-1.5' }}
+      VIDOGRID_CREDITS_PER_CLIP: ${{ vars.VIDOGRID_CREDITS_PER_CLIP }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
       YOUTUBE_PRIVACY_STATUS: private
       YOUTUBE_ALLOW_PUBLIC: "false"
