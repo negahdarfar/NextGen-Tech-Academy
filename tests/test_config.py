@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from nextgen_academy.config import Settings
@@ -20,9 +22,9 @@ def test_rejects_invalid_log_level(monkeypatch):
 def test_load_dotenv_does_not_override_process_environment(tmp_path, monkeypatch):
     from nextgen_academy.config import load_dotenv
     env_file = tmp_path / ".env"
-    env_file.write_text("GEMINI_API_KEY=from-file\\nGROQ_API_KEY='quoted-value'\\n", encoding="utf-8")
+    env_file.write_text("GEMINI_API_KEY=from-file\nGROQ_API_KEY='quoted-value'\n", encoding="utf-8")
     monkeypatch.setenv("GEMINI_API_KEY", "from-process")
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     load_dotenv(env_file)
-    assert __import__("os").environ["GEMINI_API_KEY"] == "from-process"
-    assert __import__("os").environ["GROQ_API_KEY"] == "quoted-value"
+    assert os.environ["GEMINI_API_KEY"] == "from-process"
+    assert os.environ["GROQ_API_KEY"] == "quoted-value"
