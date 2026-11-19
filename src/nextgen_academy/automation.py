@@ -64,6 +64,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         jobs.append({
             "index": index,
             "title": segment.title,
+            "duration_target_seconds": segment.duration_seconds,
             "prompt": segment.prompt,
             "status": "downloaded",
             **source,
