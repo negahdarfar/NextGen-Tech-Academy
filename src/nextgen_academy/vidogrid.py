@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -33,6 +34,7 @@ class VidoGridSettings:
 
     @classmethod
     def from_env(cls) -> "VidoGridSettings":
+        _load_local_env()
         api_key = os.getenv("VIDOGRID_API_KEY", "").strip()
         if not api_key:
             raise ValueError("VIDOGRID_API_KEY is required for VidoGrid operations")
@@ -51,6 +53,22 @@ class VidoGridSettings:
             aspect_ratio=os.getenv("VIDOGRID_ASPECT_RATIO", "16:9").strip(),
             resolution=os.getenv("VIDOGRID_RESOLUTION", "720p").strip(),
         )
+
+
+def _load_local_env() -> None:
+    """Load simple KEY=VALUE entries from .env without overriding real env vars."""
+    env_path = Path(".env")
+    if not env_path.is_file():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 class VidoGridClient:
