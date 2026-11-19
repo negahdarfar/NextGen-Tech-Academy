@@ -112,7 +112,10 @@ def generate_chapter_visuals(
         if provider == "agnes":
             result = generate_scene_video(prompt, target, seconds=clip_seconds)
         else:
-            result = download_scene_video(prompt, target, min_duration=clip_seconds)
+            search_query = str(shot.get("stock_search_query", "")).strip()
+            if not search_query:
+                raise DocumentaryVisualError(f"Visual shot {index} has no stock_search_query.")
+            result = download_scene_video(search_query, target, min_duration=clip_seconds)
             result["provider"] = "pexels"
 
         local_path = Path(result.get("local_path", target))
