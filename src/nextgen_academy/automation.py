@@ -24,6 +24,15 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
     load_dotenv()
     if publish:
         validate_youtube_credentials()
+
+    # Check VidoGrid access and the complete free-credit budget before spending
+    # any cloud LLM/TTS quota on research, writing, or narration.
+    client = VidoGridClient(VidoGridSettings.from_env())
+    account = client.account()
+    router = _VidoGridRouter()
+    planned_models = router.planned_models(4)
+    _require_free_credit_budget(account, models=planned_models)
+
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     if not topic.strip():
@@ -51,10 +60,6 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         os.getenv("TTS_VOICE", "en-US-AriaNeural"),
     )
 
-    client = VidoGridClient(VidoGridSettings.from_env())
-    account = client.account()
-    router = _VidoGridRouter()
-    _require_free_credit_budget(account, models=router.planned_models(len(segments)))
     jobs_path = root / "vidogrid-jobs.json"
     submit_segments(segments, router, jobs_path)
     poll_and_download(
