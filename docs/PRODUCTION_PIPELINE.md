@@ -54,6 +54,25 @@ python scripts/assemble_documentary.py --clips output/documentary-clips.json --o
 The JSON manifest is an ordered array of local clip paths; relative paths are resolved from the manifest file. The tool normalizes clips to 1920×1080/30fps, joins them in order, and can add a narration track and a soft Persian subtitle track. Add `--burn-subtitles` only when captions should be permanently burned into the picture. FFmpeg is required. This utility does not create long scripts, generate footage, translate subtitles, or upload/publish. It must be tested with real sample media before it is used in a scheduled workflow.
 
 
+### Resumable long-form run state
+
+After creating a blueprint, initialize a durable chapter manifest:
+
+```bash
+nextgen-academy documentary-plan --topic "How AI is changing scientific research" --minutes 15
+nextgen-academy documentary-init --plan output/documentary-plan.json --state output/documentary-run.json
+```
+
+Record chapter stages in order as work is completed. Existing chapter outputs are retained when another chapter is retried:
+
+```bash
+nextgen-academy documentary-progress --chapter 1 --status researched --output-name research --output-path output/research/chapter-01.json
+nextgen-academy documentary-progress --chapter 1 --status scripted --output-name script --output-path output/scripts/chapter-01.md
+nextgen-academy documentary-progress --chapter 2 --error "Temporary provider failure"
+```
+
+Stages are `planned → researched → scripted → narrated → assembled → reviewed`. Skipping or moving backwards is blocked by default. Re-initialization refuses to overwrite an existing run manifest. Writes use an atomic replace so an interrupted save does not leave a partially-written JSON file. When every chapter is reviewed, the run is marked `ready_for_human_approval`; this is not permission to publish publicly. These commands track state only and do not yet run the chapter research, writing, narration, or media-generation stages automatically.
+
 ### Optional FreeLLMAPI cloud route
 
 The LLM provider chain can use `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY` before the existing providers. The adapter calls the gateway model catalogue first and accepts only explicit free markers or machine-readable zero input/output prices. Unknown pricing is not treated as free. This is the cloud endpoint only; it does not connect to the phone/Tailscale gateway. The credentials are optional and must be entered directly as Actions Secrets in this repository if available.
