@@ -28,10 +28,10 @@ The current workflow does not need `OMNIROUTE_BASE_URL` or `OMNIROUTE_API_KEY` r
 
 OmniRoute is a routing gateway, not a source of free credits. This implementation uses the explicit Gemini model by default rather than assuming an undocumented `auto/subscription` route. A free-tier API key may still be rate-limited or unavailable, and a project with billing enabled may incur charges. Check the provider's current console and terms.
 
-The workflow retains the existing VidoGrid free-credit guard and private YouTube upload default. LLM provider fallback is configurable; if strict zero-cost behavior is required, configure only providers/models whose no-charge status and hard-stop behavior have been verified. Never assume a provider will stop instead of billing after a quota is exhausted.
+The workflow uses Pexels' free stock-footage API and keeps YouTube uploads private by default. LLM provider fallback is configurable; if strict zero-cost behavior is required, configure only providers/models whose no-charge status and hard-stop behavior have been verified. Never assume a provider will stop instead of billing after a quota is exhausted.
 
 ## Manual verification
 
-After the pull request is merged, open Actions → Automated YouTube video factory and run it with a topic. Check the log for “OmniRoute is ready on the GitHub-hosted runner.” The first full run still requires valid VidoGrid credentials and separately verified free-credit cost settings, Edge TTS network availability, and YouTube OAuth JSON if upload is enabled.
+After the pull request is merged, open Actions → Automated YouTube video factory and run it with a topic. Check the log for “OmniRoute is ready on the GitHub-hosted runner.” The first full run still requires a valid free Pexels API key, Edge TTS network availability, and YouTube OAuth JSON if upload is enabled.
 
 No credentials are written to the repository, and no live provider request or video generation is performed by the code change itself.
