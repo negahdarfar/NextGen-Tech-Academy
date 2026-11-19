@@ -85,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--storyboard", default="output/storyboard.json")
     review.add_argument("--output", default="output/script-review.json")
 
+    auto = sub.add_parser("auto-run", help="run cloud production without Ollama")
+    auto.add_argument("--topic", default="", help="leave blank for automatic RSS topic discovery")
+    auto.add_argument("--output-dir", default="output")
+    auto.add_argument("--upload", action="store_true", help="upload the finished video to YouTube (private by default)")
+
     return parser
 
 
@@ -194,6 +199,12 @@ def main() -> int:
         report = write_review_report(args.storyboard, args.output)
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["passed"] else 1
+
+    if args.command == "auto-run":
+        from .automation import run_automated
+        result = run_automated(args.topic, args.output_dir, publish=args.upload)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
 
     return 2
 
