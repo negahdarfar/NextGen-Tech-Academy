@@ -79,7 +79,8 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         + json.dumps(source_notes, ensure_ascii=False)
     )
     clip_seconds = int(chapter.get("visual_clip_target_seconds", state.get("visual_clip_target_seconds", 12)))
-    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds\n    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
+    shot_count = (int(chapter["duration_seconds"]) + clip_seconds - 1) // clip_seconds
+    user_prompt += f"\\nReturn exactly {shot_count} visual_shots, each intended for a {clip_seconds}-second clip."\n    data = generate_json(SYSTEM_PROMPT, user_prompt)
     narration = str(data.get("narration_en", "")).strip()
     translation = str(data.get("subtitle_fa", "")).strip()
     claims = data.get("claims")\n    visual_shots = data.get("visual_shots")
