@@ -207,7 +207,7 @@ def write_srt(segments: list[dict[str, Any]], target: str | Path) -> Path:
     rows = []
     for item in segments:
         duration = float(item.get("duration_seconds", 15))
-        narration = str(item.get("narration", "")).strip()
+        narration = str(item.get("subtitle") or item.get("narration", "")).strip()
         if narration:
             start, end = _stamp(cursor), _stamp(cursor + duration)
             rows.append(f"{len(rows)+1}\n{start} --> {end}\n{narration}\n")
