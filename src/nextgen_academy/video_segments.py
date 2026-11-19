@@ -14,6 +14,7 @@ class VideoSegment:
     prompt: str
     continuity_in: str
     continuity_out: str
+    subtitle: str = ""
 
 
 def build_segments(
