@@ -1,4 +1,4 @@
-"""Poll VidoGrid jobs, download clips, and assemble a one-minute MP4."""
+"""Validate downloaded media and assemble a one-minute MP4 with FFmpeg."""
 
 from __future__ import annotations
 
@@ -155,7 +155,7 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
             raise PipelineError(f"Missing downloaded clip: {source}")
         target = work / f"clip_{int(job['index']):03d}.mp4"
         command = [
-            ffmpeg, "-y", "-i", str(source), "-an",
+            ffmpeg, "-y", "-stream_loop", "-1", "-i", str(source), "-an",
             "-t", str(job.get("duration_target_seconds", 15)),
             "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,"
                    "pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
