@@ -24,16 +24,16 @@ def test_visual_generation_resumes_and_records_provider_provenance(tmp_path, mon
     def fake_generate(prompt, path, seconds):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"x" * 2048)
-        return {"provider": "agnes", "model": "mock", "local_path": str(path), "duration_seconds": seconds}
+        return {"provider": "agnes", "model": "mock", "video_id": "test-job", "local_path": str(path), "duration_seconds": seconds}
     monkeypatch.setattr(documentary_visuals, "generate_scene_video", fake_generate)
-    result = documentary_visuals.generate_chapter_visuals(state, 1, script, tmp_path / "assets")
+    result = documentary_visuals.generate_chapter_visuals(state, 1, script, tmp_path / "assets", provider="agnes", allow_agnes_potential_cost=True)
     assert result["status"] == "complete"
     manifest = json.loads(Path(result["manifest_path"]).read_text())
     assert manifest["shots"][0]["provider"] == "agnes"
     # A second run reuses the already downloaded shot; no provider call is made.
     monkeypatch.setattr(documentary_visuals, "generate_scene_video",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("must resume")))
-    result2 = documentary_visuals.generate_chapter_visuals(state, 1, script, tmp_path / "assets")
+    result2 = documentary_visuals.generate_chapter_visuals(state, 1, script, tmp_path / "assets", provider="agnes", allow_agnes_potential_cost=True)
     assert result2["status"] == "complete"
 
 
