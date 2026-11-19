@@ -35,7 +35,9 @@ def build_parser() -> argparse.ArgumentParser:
     clips = sub.add_parser("video-plan", help="create four linked 15-second clip prompts")
     clips.add_argument("--topic", required=True)
     clips.add_argument("--scene", action="append",
-                       help="scene description; repeat four times to override defaults")
+                       help="scene description; repeat four times to override storyboard scenes")
+    clips.add_argument("--storyboard", default="output/storyboard.json",
+                       help="use the edited storyboard by default")
     clips.add_argument("--style", default="cinematic documentary, realistic detail, natural motion")
     clips.add_argument("--output", default="output/video-plan.json")
 
@@ -87,14 +89,28 @@ def main() -> int:
         return 0
 
     if args.command == "video-plan":
-        scenes = args.scene or [item["scene"] for item in default_storyboard(args.topic)]
+        storyboard_scenes = None
+        storyboard_path = Path(args.storyboard)
+        if not args.scene and storyboard_path.is_file():
+            storyboard_payload = json.loads(storyboard_path.read_text(encoding="utf-8"))
+            if storyboard_payload.get("topic") != args.topic:
+                raise SystemExit("Storyboard topic does not match --topic.")
+            storyboard_scenes = storyboard_payload.get("scenes", [])
+            scenes = [item["scene"] for item in storyboard_scenes]
+        else:
+            scenes = args.scene or [item["scene"] for item in default_storyboard(args.topic)]
         if len(scenes) != 4:
             raise SystemExit("The current one-minute preset requires exactly four scenes.")
         segments = build_segments(args.topic, scenes, args.style, duration_seconds=15)
+        segment_data = segments_as_dicts(segments)
+        if storyboard_scenes:
+            for index, scene in enumerate(storyboard_scenes):
+                segment_data[index]["narration"] = scene.get("narration_en", "")
+                segment_data[index]["subtitle"] = scene.get("subtitle_fa", "")
         payload = {
             "topic": args.topic, "target_duration_seconds": 60,
             "clip_duration_target_seconds": 15, "aspect_ratio": "16:9",
-            "visual_style": args.style, "segments": segments_as_dicts(segments),
+            "visual_style": args.style, "segments": segment_data,
         }
         target = Path(args.output)
         target.parent.mkdir(parents=True, exist_ok=True)
