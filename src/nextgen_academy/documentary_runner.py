@@ -61,7 +61,7 @@ def produce_documentary(topic: str, minutes: int = 15,
                 synthesize_documentary_chapter(
                     state_file, number, script_file, root / "media", voice
                 )
-                current = load_run_state(state_file)["chapters"][number - 1]["status"]
+                current = next(item["status"] for item in load_run_state(state_file)["chapters"] if int(item["chapter"]) == number)
             if current in {"narrated", "assembled"}:
                 generate_chapter_visuals(
                     state_file, number, script_file, root / "visuals", provider
