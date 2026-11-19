@@ -1,5 +1,4 @@
 name: Automated YouTube video factory
-
 on:
   workflow_dispatch:
     inputs:
@@ -14,18 +13,15 @@ on:
         type: boolean
   schedule:
     - cron: "17 6 * * 2,5"
-
 permissions:
   contents: read
-
 concurrency:
   group: nextgen-video-factory
   cancel-in-progress: false
-
 jobs:
   produce:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 90
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -33,11 +29,7 @@ jobs:
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
       LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'gemini,groq,openrouter' }}
-      VIDOGRID_API_KEY: ${{ secrets.VIDOGRID_API_KEY }}
-      VIDOGRID_MODEL_ROTATION: ${{ vars.VIDOGRID_MODEL_ROTATION || 'grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash' }}
-      VIDOGRID_MODEL_CREDIT_COSTS: ${{ vars.VIDOGRID_MODEL_CREDIT_COSTS }}
-      VIDOGRID_TOTAL_BALANCE_IS_FREE: ${{ vars.VIDOGRID_TOTAL_BALANCE_IS_FREE || 'false' }}
-      VIDOGRID_CREDITS_PER_CLIP: ${{ vars.VIDOGRID_CREDITS_PER_CLIP }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
       YOUTUBE_PRIVACY_STATUS: private
       YOUTUBE_ALLOW_PUBLIC: "false"
@@ -58,11 +50,7 @@ jobs:
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_UPLOAD: ${{ inputs.upload }}
         run: |
-          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
-            UPLOAD=true
-          else
-            UPLOAD="${INPUT_UPLOAD}"
-          fi
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then UPLOAD=true; else UPLOAD="${INPUT_UPLOAD}"; fi
           if [ "${UPLOAD}" = "true" ]; then
             nextgen-academy auto-run --topic "${INPUT_TOPIC}" --upload
           else

@@ -21,8 +21,3 @@ def test_auto_run_command_is_available_without_ollama():
     assert args.command == "auto-run"
     assert args.topic == "robotics"
     assert args.upload is True
-
-
-def test_vidogrid_account_command_does_not_require_generation_flags():
-    args = build_parser().parse_args(["vidogrid-account"])
-    assert args.command == "vidogrid-account"
