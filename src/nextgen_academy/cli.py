@@ -12,7 +12,7 @@ from .planning import build_plan, plan_as_dict
 from .script import default_storyboard, save_script_package, storyboard_subtitles
 from .script_review import write_review_report
 from .tts import synthesize_storyboard
-from .video_pipeline import poll_and_download, render_video
+from .video_pipeline import render_video
 from .video_segments import VideoSegment, build_segments, segments_as_dicts
 from .youtube_package import build_youtube_package
 
