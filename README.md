@@ -53,7 +53,7 @@ See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorizat
 
 ## OmniRoute integration (ephemeral GitHub Actions gateway)
 
-The video factory starts OmniRoute directly on the GitHub-hosted runner for each job. It installs Node.js 22 and the pinned `omniroute@3.8.55` package, starts the API on loopback (`127.0.0.1:20128`), checks readiness, and runs the existing production pipeline. The runner is discarded after the job. No VPS, public gateway URL, always-on laptop, or Ollama installation is required.
+The video factory starts OmniRoute directly on the GitHub-hosted runner for each job. It installs Node.js 22 and the pinned `omniroute@3.8.54` package, starts the API on loopback (`127.0.0.1:20128`), checks readiness, and runs the existing production pipeline. The runner is discarded after the job. No VPS, public gateway URL, always-on laptop, or Ollama installation is required.
 
 The workflow reuses the existing `GEMINI_API_KEY` Actions secret as the upstream Gemini credential. The default OmniRoute model is `gemini/gemini-2.5-flash`; optionally override it with the `OMNIROUTE_MODEL` Actions variable after verifying provider availability and billing. No separate `OMNIROUTE_BASE_URL` or `OMNIROUTE_API_KEY` repository secrets are required for this local ephemeral mode.
 
