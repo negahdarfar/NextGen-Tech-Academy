@@ -8,8 +8,8 @@ owner separately chooses a vertical format.
 
 1. Create a four-beat storyboard and review the prompts.
 2. Fill the four `narration_en` and `subtitle_fa` fields in the storyboard with fact-checked English narration and faithful Persian translations.
-3. Generate Persian SRT and, if a properly licensed Piper voice model is installed, local English narration WAV. These steps use no paid API credits.
-4. Generate the clip prompt manifest locally; this step spends no API credits.
+3. Generate the clip prompt manifest from the edited storyboard; narration and subtitles are carried into the clip manifest. This step spends no API credits.
+4. Generate Persian SRT and, if a properly licensed Piper voice model is installed, local English narration WAV. These steps use no paid API credits.
 5. Review the VidoGrid account balance, then explicitly approve paid API submission.
 6. Poll each accepted job UUID, persist status, and download the completed MP4.
 7. Normalize and concatenate the clips with FFmpeg.
