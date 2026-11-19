@@ -14,7 +14,7 @@ class OmniRouteAdapterTests(unittest.TestCase):
     @patch("nextgen_academy.llm._post")
     def test_uses_openai_compatible_endpoint_and_auth(self, post):
         post.return_value = {
-            "choices": [{"message": {"content": "{\\"title\\": \\"ok\\"}"}}]
+            "choices": [{"message": {"content": '{"title": "ok"}'}}]
         }
 
         result = llm._omniroute("system", "user")
