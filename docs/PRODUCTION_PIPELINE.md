@@ -14,7 +14,8 @@ owner separately chooses a vertical format.
 6. Poll each accepted job UUID, persist status, and download the completed MP4.
 7. Normalize and concatenate the clips with FFmpeg.
 8. Mux the narration audio and Persian SRT subtitle track.
-9. Review duration, visual continuity, factual accuracy, audio levels, subtitles,
+9. Generate an editable YouTube metadata draft with `nextgen-academy youtube-package`.
+10. Review duration, visual continuity, factual accuracy, audio levels, subtitles,
    copyright, and provider watermarks manually before upload.
 
 ## Commands
@@ -23,6 +24,7 @@ owner separately chooses a vertical format.
 nextgen-academy storyboard --topic "How quantum computers work"
 nextgen-academy video-plan --topic "How quantum computers work" --scene "..." --scene "..." --scene "..." --scene "..."
 nextgen-academy subtitles
+nextgen-academy youtube-package
 nextgen-academy voiceover --model models/piper/your-english-voice.onnx
 nextgen-academy video-submit --confirm-paid-api
 nextgen-academy video-download
@@ -43,6 +45,6 @@ a ready-made audio file with `--narration-audio`.
   paid-API acknowledgement and an interactive confirmation.
 - Automated research and fact-checking are not implemented; scripts must be reviewed and supplied by the user.
 - Piper TTS is an optional local engine requiring a downloaded voice model. Review each model's license and commercial-use terms; the pipeline does not automatically choose a voice.
-- Thumbnail generation and YouTube publishing are not implemented yet.
+- The SEO package is a template only; automated search-volume research, competitor analysis, thumbnail image generation, analytics feedback and YouTube publishing are not implemented yet.
 - YouTube publishing remains deliberately out of scope until OAuth, quota handling,
   resumable uploads, channel confirmation, and a final human approval gate exist.
