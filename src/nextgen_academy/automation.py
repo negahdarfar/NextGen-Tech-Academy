@@ -6,6 +6,7 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
+from .config import load_dotenv
 from .cloud_tts import synthesize_cloud_narration
 from .cloud_writer import draft_cloud_storyboard
 from .research import discover_sources
@@ -20,6 +21,7 @@ from .youtube_upload import upload_video, validate_youtube_credentials
 
 def run_automated(topic: str = "", output_dir: str | Path = "output",
                   publish: bool = False) -> dict:
+    load_dotenv()
     if publish:
         validate_youtube_credentials()
     root = Path(output_dir)
