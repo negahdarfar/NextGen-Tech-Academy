@@ -9,6 +9,7 @@ from .research import discover_sources
 from .evidence_audit import enrich_sources, write_evidence_audit
 from .video_pipeline import render_video, validate_render_duration, write_srt
 from .stock_media import PexelsClient
+from .ltx_video import LTXClient, LTXError
 from .youtube_package import build_youtube_package
 from .youtube_upload import upload_video, validate_youtube_credentials
 
@@ -46,24 +47,58 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
     # marks a claim true; manual source review is still mandatory.
     write_evidence_audit(storyboard, sources, root / "evidence-audit.json")
 
+    # Always acquire Pexels first: it is the zero-generation-cost fallback.
     client = PexelsClient()
+    ltx = LTXClient.from_env()
+    ltx_budget = ltx.max_spend_usd if ltx else 0.0
+    try:
+        max_ltx_scenes = max(0, min(scene_count, int(os.getenv("LTX_MAX_SCENES", "2"))))
+    except ValueError:
+        max_ltx_scenes = 0
+    ltx_count = ltx.allowed_clip_count(ltx_budget, max_ltx_scenes) if ltx else 0
     jobs = []
     for index, scene in enumerate(scenes, 1):
         query = " ".join([topic, scene.get("scene", "")]).strip()[:180]
         target = root / "clips" / f"clip_{index:03d}.mp4"
         source = client.download_clip(query, target, min_duration=scene_duration)
-        jobs.append({
+        job = {
             "index": index,
             "title": scene.get("title", f"Scene {index:03d}"),
             "duration_target_seconds": scene_duration,
             "local_path": str(target),
             "source": source,
+            "media_provider": "pexels",
             "status": "downloaded",
-        })
+        }
+        # Generate only a small, explicitly budgeted number of premium shots.
+        # If LTX is unavailable or a job fails, keep the already-downloaded
+        # Pexels clip and continue without interrupting the documentary.
+        if ltx and index <= ltx_count:
+            generated = root / "clips" / f"ltx_{index:03d}.mp4"
+            prompt = (
+                "Cinematic documentary B-roll, realistic natural motion, "
+                "no captions, no logos, no watermarks. "
+                + str(scene.get("scene", scene.get("title", topic)))
+            )[:1800]
+            try:
+                ltx_result = ltx.generate_clip(prompt, generated)
+                job.update({
+                    "local_path": str(generated),
+                    "media_provider": "ltx-2.5",
+                    "ltx": ltx_result,
+                    "status": "generated",
+                })
+            except LTXError as exc:
+                job["ltx_fallback_reason"] = str(exc)[:500]
+        jobs.append(job)
+    ltx_jobs = [job for job in jobs if job.get("media_provider") == "ltx-2.5"]
     manifest = {
-        "provider": "pexels-stock",
+        "provider": "hybrid-ltx-2.5-pexels" if ltx_jobs else "pexels-stock",
         "status": "downloaded",
         "target_duration_seconds": target_seconds,
+        "ltx_generated_count": len(ltx_jobs),
+        "ltx_estimated_cost_usd": round(sum(job["ltx"]["estimated_cost_usd"] for job in ltx_jobs), 4),
+        "ltx_api_enabled": bool(ltx),
         "jobs": jobs,
     }
     (root / "stock-footage-sources.json").write_text(
@@ -119,7 +154,9 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
         "evidence_audit": str(root / "evidence-audit.json"),
         "youtube_uploaded": False,
         "privacy_status": "not_uploaded",
-        "footage_provider": "Pexels",
+        "footage_provider": manifest["provider"],
+        "ltx_generated_count": len(ltx_jobs),
+        "ltx_estimated_cost_usd": manifest["ltx_estimated_cost_usd"],
         "narration": "English",
         "subtitles": "Persian",
         "human_fact_check_required": True,
