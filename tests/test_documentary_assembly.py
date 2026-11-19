@@ -76,7 +76,7 @@ def test_assembles_all_chapters_and_checkpoints_without_public_upload(tmp_path, 
         if "-show_entries" in command:
             return json.dumps({"streams": [
                 {"codec_type": "video", "width": 1920, "height": 1080, "avg_frame_rate": "30/1"},
-                {"codec_type": "audio"}, {"codec_type": "subtitle"}]})
+                {"codec_type": "audio", "sample_rate": "48000", "channels": 2}, {"codec_type": "subtitle"}]})
         if command[-1].endswith(".mp4") or command[-1].endswith(".wav"):
             Path(command[-1]).write_bytes(b"z" * 2048)
         return ""
