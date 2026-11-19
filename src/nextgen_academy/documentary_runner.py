@@ -36,6 +36,11 @@ def produce_documentary(
     allow_agnes_potential_cost: bool = False,
 ) -> dict[str, Any]:
     """Run research → script → TTS/SRT → resumable visuals → assembly; never upload."""
+    if not confirm_provider_requests:
+        raise DocumentaryRunError(
+            "External LLM, TTS and visual-provider requests require --confirm-provider-requests. "
+            "No provider request was sent."
+        )
     if provider == "agnes" and not allow_agnes_potential_cost:
         raise DocumentaryRunError(
             "Agnes may be chargeable if its temporary promotion has ended; check pricing and explicitly enable the separate cost confirmation."
