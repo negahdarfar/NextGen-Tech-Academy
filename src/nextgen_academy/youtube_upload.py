@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,16 +12,12 @@ class YouTubeUploadError(RuntimeError):
     pass
 
 
-def upload_video(video_path: str | Path, metadata_path: str | Path,
-                 privacy_status: str | None = None) -> dict[str, Any]:
+def _credentials():
     try:
         from google.auth.transport.requests import Request
         from google.oauth2.credentials import Credentials
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
     except ImportError as exc:
-        raise YouTubeUploadError("Install the youtube optional dependencies.") from exc
-
+        raise YouTubeUploadError("Install the cloud optional dependencies.") from exc
     token_json = os.getenv("YOUTUBE_TOKEN_JSON", "").strip()
     if not token_json:
         raise YouTubeUploadError("YOUTUBE_TOKEN_JSON secret is missing.")
@@ -31,10 +28,29 @@ def upload_video(video_path: str | Path, metadata_path: str | Path,
     except Exception as exc:
         raise YouTubeUploadError(f"Invalid YouTube OAuth token JSON: {exc}") from exc
     if credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
+        try:
+            credentials.refresh(Request())
+        except Exception as exc:
+            raise YouTubeUploadError(f"YouTube OAuth refresh failed: {exc}") from exc
     if not credentials.valid:
         raise YouTubeUploadError("YouTube OAuth credentials are not valid or refreshable.")
+    return credentials
 
+
+def validate_youtube_credentials() -> None:
+    """Validate/refresh OAuth before any billable video generation starts."""
+    _credentials()
+
+
+def upload_video(video_path: str | Path, metadata_path: str | Path,
+                 privacy_status: str | None = None) -> dict[str, Any]:
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+    except ImportError as exc:
+        raise YouTubeUploadError("Install the cloud optional dependencies.") from exc
+
+    credentials = _credentials()
     video = Path(video_path)
     if not video.is_file() or video.stat().st_size < 1024:
         raise YouTubeUploadError("The final MP4 is missing or unexpectedly small.")
@@ -64,9 +80,12 @@ def upload_video(video_path: str | Path, metadata_path: str | Path,
     while response is None:
         try:
             _, response = request.next_chunk()
+            retries = 0
         except Exception:
             retries += 1
             if retries > 5:
                 raise
-    return {"video_id": response.get("id"), "url": f"https://www.youtube.com/watch?v={response.get('id')}",
+            time.sleep(min(2 ** retries, 30))
+    video_id = response.get("id")
+    return {"video_id": video_id, "url": f"https://www.youtube.com/watch?v={video_id}",
             "privacy_status": privacy, "title": title}
