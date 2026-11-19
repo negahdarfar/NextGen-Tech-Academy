@@ -38,7 +38,7 @@ def submit_segments(
         manifest = {
             "provider": "vidogrid",
             "status": "submitting",
-            "clip_duration_target_seconds": 15,
+            "clip_duration_target_seconds": segments[0].duration_seconds if segments else 15,\n            "target_duration_seconds": sum(segment.duration_seconds for segment in segments),
             "jobs": [],
         }
         existing = {}
