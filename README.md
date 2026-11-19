@@ -28,7 +28,7 @@ Optional repository variables:
 - `LLM_PROVIDER_ORDER` (default `gemini,groq,openrouter`)
 - `OPENROUTER_MODEL` (must end in `:free`; paid models are blocked)
 
-Open **Actions → Automated YouTube documentary factory → Run workflow**. Choose a duration from 3 to 10 minutes and the number of vertical highlights (3, 5 or 8). Leave topic blank for automatic topic discovery. The upload checkbox defaults to false; if enabled, the finished master video is uploaded privately. Scheduled runs are Tuesday and Friday at 06:17 UTC and upload privately.
+Open **Actions → Automated YouTube documentary factory → Run workflow**. Choose a duration from 3 to 10 minutes and the number of vertical highlights (3, 5 or 8). Leave topic blank for automatic topic discovery. The upload checkbox defaults to false; if enabled, the finished master video is uploaded privately. Scheduled runs are Tuesday and Friday at 06:17 UTC; they upload privately only when `YOUTUBE_TOKEN_JSON` is configured, otherwise they still generate the artifact.
 
 ## Outputs
 The workflow preserves `output/` as a GitHub Actions artifact for 14 days, including the master MP4, storyboard, Persian SRT, narration, footage-source manifest, YouTube metadata package, vertical MP4 clips and highlight report. If highlight extraction fails, the master documentary and its files are still preserved.
