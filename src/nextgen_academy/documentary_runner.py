@@ -22,7 +22,7 @@ def produce_documentary(topic: str, minutes: int = 15,
                         state_path: str | Path = "output/documentary-run.json",
                         output_dir: str | Path = "output/documentary",
                         provider: str = "auto", voice: str = "en-US-AriaNeural",
-                        confirm_provider_requests: bool = False) -> dict[str, Any]:
+                        confirm_provider_requests: bool = False,\n                        allow_agnes_potential_cost: bool = False) -> dict[str, Any]:
     """Run research → script → TTS/SRT → resumable visuals → assembly; never upload."""
     if not confirm_provider_requests:
         raise DocumentaryRunError(
