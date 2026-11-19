@@ -57,6 +57,8 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
         max_ltx_scenes = 0
     ltx_count = ltx.allowed_clip_count(ltx_budget, max_ltx_scenes) if ltx else 0
     jobs = []
+    ltx_failed = False
+    ltx_failure_reason = ""
     for index, scene in enumerate(scenes, 1):
         query = " ".join([topic, scene.get("scene", "")]).strip()[:180]
         target = root / "clips" / f"clip_{index:03d}.mp4"
@@ -73,7 +75,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
         # Generate only a small, explicitly budgeted number of premium shots.
         # If LTX is unavailable or a job fails, keep the already-downloaded
         # Pexels clip and continue without interrupting the documentary.
-        if ltx and index <= ltx_count:
+        if ltx and not ltx_failed and index <= ltx_count:
             generated = root / "clips" / f"ltx_{index:03d}.mp4"
             prompt = (
                 "Cinematic documentary B-roll, realistic natural motion, "
@@ -89,7 +91,9 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
                     "status": "generated",
                 })
             except LTXError as exc:
-                job["ltx_fallback_reason"] = str(exc)[:500]
+                ltx_failed = True
+                ltx_failure_reason = str(exc)[:500]
+                job["ltx_fallback_reason"] = ltx_failure_reason
         jobs.append(job)
     ltx_jobs = [job for job in jobs if job.get("media_provider") == "ltx-2.5"]
     manifest = {
@@ -99,6 +103,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
         "ltx_generated_count": len(ltx_jobs),
         "ltx_estimated_cost_usd": round(sum(job["ltx"]["estimated_cost_usd"] for job in ltx_jobs), 4),
         "ltx_api_enabled": bool(ltx),
+        "ltx_failure_reason": ltx_failure_reason,
         "jobs": jobs,
     }
     (root / "stock-footage-sources.json").write_text(
