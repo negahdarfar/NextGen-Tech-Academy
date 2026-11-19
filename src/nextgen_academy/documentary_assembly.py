@@ -201,7 +201,8 @@ def assemble_documentary_run(state_path: str | Path,
         )
     return {"status": "assembled_pending_human_review", "output": str(output),
             "duration_seconds": round(actual, 2), "target_duration_seconds": target_seconds,
-            "chapter_count": len(chapter_inputs), "visual_shot_count": len(video_files),\n            "chapter_timeline": chapter_timeline,
+            "chapter_count": len(chapter_inputs), "visual_shot_count": len(video_files),
+            "chapter_timeline": chapter_timeline,
             "resolution": "1920x1080", "frame_rate": 30,
             "subtitle_track": "Persian soft subtitle (SRT converted to mov_text)",
             "public_upload": False, "human_review_required": True}
