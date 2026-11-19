@@ -50,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     clips.add_argument("--style", default="cinematic documentary, realistic detail, natural motion")
     clips.add_argument("--output", default="output/video-plan.json")
 
-    submit = sub.add_parser("video-submit", help="submit clips to VidoGrid (uses credits)")
+    submit = sub.add_parser("video-submit", help="submit clips to VidoGrid after free-credit budget validation and interactive confirmation")
     submit.add_argument("--manifest", default="output/video-plan.json")
     submit.add_argument("--jobs-output", default="output/vidogrid-jobs.json")
     submit.add_argument("--confirm-paid-api", action="store_true")
