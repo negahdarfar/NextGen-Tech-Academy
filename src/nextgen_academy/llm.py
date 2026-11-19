@@ -47,7 +47,7 @@ def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
         except Exception as exc:
             failures.append(f"{provider}: {str(exc)[:300]}")
     if not failures:
-        raise LLMError("No cloud LLM provider is configured. Set OMNIROUTE_BASE_URL or add GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
+        raise LLMError("No cloud LLM provider is configured. Set a FreeLLMAPI cloud pair, OMNIROUTE_BASE_URL, GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY.")
     raise LLMError("All configured LLM providers failed: " + " | ".join(failures))
 
 
