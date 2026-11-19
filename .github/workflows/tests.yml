@@ -30,9 +30,6 @@ jobs:
       PORT: "20128"
       REQUIRE_API_KEY: "false"
       OMNIROUTE_MEMORY_MB: "512"
-      INITIAL_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-      JWT_SECRET: ${{ secrets.GITHUB_TOKEN }}
-      API_KEY_SECRET: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/setup-node@v4
         with:
@@ -45,6 +42,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export INITIAL_PASSWORD="$(openssl rand -hex 32)"
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          export API_KEY_SECRET="$(openssl rand -hex 32)"
           mkdir -p "$DATA_DIR"
           omniroute setup --non-interactive --password "$INITIAL_PASSWORD"
           nohup omniroute --no-open > "$RUNNER_TEMP/omniroute-smoke.log" 2>&1 &
