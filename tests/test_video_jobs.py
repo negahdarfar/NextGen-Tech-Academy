@@ -38,7 +38,7 @@ def test_resume_skips_already_accepted_jobs(tmp_path):
     manifest = submit_segments(segments, second_provider, path)
 
     assert len(second_provider.prompts) == 1
-    assert [job["job_uuid"] for job in manifest["jobs"]] == ["job-1", "job-1"]
+    assert [job["index"] for job in manifest["jobs"]] == [1, 2]
 
 
 def test_resume_rejects_a_different_storyboard(tmp_path):
