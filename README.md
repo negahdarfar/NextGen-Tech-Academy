@@ -45,7 +45,7 @@ nextgen-academy auto-run --topic "How humanoid robots are changing manufacturing
 
 Add credentials to the process environment or a local, ignored `.env` file. Never commit keys or OAuth tokens.
 
-## YouTube publishing safeguards
+See [YouTube OAuth setup](docs/YOUTUBE_SETUP.md) for one-time channel authorization and secure GitHub secret configuration.\n\n## YouTube publishing safeguards
 
 - OAuth refresh-token credentials are required; an API key alone cannot upload to a personal channel.
 - Default visibility is **private**. Public publishing is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is explicitly set.
