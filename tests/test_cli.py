@@ -13,3 +13,11 @@ def test_local_draft_command_defaults_to_small_ollama_model():
     args = build_parser().parse_args(["draft-script", "--topic", "robotics"])
     assert args.model == "qwen2.5:3b"
     assert args.output == "output/storyboard.json"
+
+
+
+def test_auto_run_command_is_available_without_ollama():
+    args = build_parser().parse_args(["auto-run", "--topic", "robotics", "--upload"])
+    assert args.command == "auto-run"
+    assert args.topic == "robotics"
+    assert args.upload is True
