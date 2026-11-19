@@ -57,7 +57,7 @@ def _run_with_outputs(tmp_path):
     for stage in ("researched", "scripted", "narrated"):
         update_chapter_state(state, 1, status=stage)
     audio = tmp_path / "audio.mp3"; audio.write_bytes(b"a" * 2048)
-    srt = tmp_path / "captions.srt"; srt.write_text("1\\n00:00:00,000 --> 00:00:10,000\\nسلام\\n", encoding="utf-8-sig")
+    srt = tmp_path / "captions.srt"; srt.write_text("1\n00:00:00,000 --> 00:00:10,000\nسلام\n", encoding="utf-8-sig")
     clip = tmp_path / "clip.mp4"; clip.write_bytes(b"v" * 2048)
     manifest = tmp_path / "assets.json"
     manifest.write_text(json.dumps({"status": "complete", "shots": [
