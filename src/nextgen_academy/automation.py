@@ -129,7 +129,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output", publish: b
     package = json.loads(package_path.read_text(encoding="utf-8"))
     credits = "\n".join(
         f"- Pexels creator: {job['source'].get('creator')}; {job['source'].get('source_url')}"
-        for job in jobs
+        for job in jobs if job.get("media_provider") == "pexels"
     )
     refs = "\n".join(
         f"- {source['publisher']}: {source['title']} — {source['url']}"
