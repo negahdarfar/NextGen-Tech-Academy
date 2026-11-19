@@ -55,7 +55,7 @@ def process_documentary_chapter(state_path: str | Path, chapter_number: int,
         }
         _write_json(research_path, research_payload)
         update_chapter_state(state_path, chapter_number, status="researched",
-                             outputs={"research": str(research_path)})
+                             outputs={"research": str(research_path)}, force=force)
     else:
         research_payload = json.loads(research_path.read_text(encoding="utf-8"))
         sources = research_payload["sources"]
