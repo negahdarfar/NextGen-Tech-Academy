@@ -34,11 +34,7 @@ jobs:
       OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
       ALLOW_PAID_LLM: "false"
       LLM_PROVIDER_ORDER: ${{ vars.LLM_PROVIDER_ORDER || 'omniroute,gemini,groq,openrouter' }}
-      VIDOGRID_API_KEY: ${{ secrets.VIDOGRID_API_KEY }}
-      VIDOGRID_MODEL_ROTATION: ${{ vars.VIDOGRID_MODEL_ROTATION || 'grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash' }}
-      VIDOGRID_MODEL_CREDIT_COSTS: ${{ vars.VIDOGRID_MODEL_CREDIT_COSTS }}
-      VIDOGRID_TOTAL_BALANCE_IS_FREE: ${{ vars.VIDOGRID_TOTAL_BALANCE_IS_FREE || 'false' }}
-      VIDOGRID_CREDITS_PER_CLIP: ${{ vars.VIDOGRID_CREDITS_PER_CLIP }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
       YOUTUBE_PRIVACY_STATUS: private
       YOUTUBE_ALLOW_PUBLIC: "false"
@@ -50,14 +46,12 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          VIDOGRID_API_KEY: ${{ secrets.VIDOGRID_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-          VIDOGRID_MODEL_CREDIT_COSTS: ${{ vars.VIDOGRID_MODEL_CREDIT_COSTS }}
           INPUT_UPLOAD: ${{ inputs.upload }}
         run: |
           set -euo pipefail
-          [ -n "$VIDOGRID_API_KEY" ] || { echo "Missing GitHub Actions Secret: VIDOGRID_API_KEY"; exit 1; }
-          [ -n "$VIDOGRID_MODEL_CREDIT_COSTS" ] || { echo "Missing GitHub Actions Variable: VIDOGRID_MODEL_CREDIT_COSTS (exact model costs are required by the free-credit guard)."; exit 1; }
+          [ -n "$PEXELS_API_KEY" ] || { echo "Missing GitHub Actions Secret: PEXELS_API_KEY (free Pexels API key required for stock footage)."; exit 1; }
           if [ -z "$GEMINI_API_KEY$GROQ_API_KEY$OPENROUTER_API_KEY" ]; then
             echo "Configure at least one LLM secret: GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY."
             exit 1
