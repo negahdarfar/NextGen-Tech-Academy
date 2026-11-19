@@ -125,6 +125,7 @@ def build_documentary_metadata(
         "publication_checks": [
             "Open and verify every cited source; discovery feeds are not fact-checking.",
             "Check every factual claim, statistic, date and quotation against the original source.",
+            "Confirm the TTS voice/provider permits commercial YouTube use.",
             "Verify stock footage and AI-provider commercial-use terms and keep the asset provenance ledger.",
             "Review the AI/synthetic-content disclosure setting required by YouTube for this specific video.",
             "Watch the complete video and check narration, chapter boundaries and Persian subtitle timing.",
