@@ -7,16 +7,16 @@ import json
 from pathlib import Path
 
 from .config import Settings
+from .ollama_writer import draft_storyboard
 from .planning import build_plan, plan_as_dict
 from .script import default_storyboard, save_script_package, storyboard_subtitles
+from .script_review import write_review_report
+from .tts import synthesize_storyboard
 from .video_jobs import submit_segments
 from .video_pipeline import poll_and_download, render_video
 from .video_segments import VideoSegment, build_segments, segments_as_dicts
 from .vidogrid import VidoGridClient, VidoGridSettings
-from .tts import synthesize_storyboard
 from .youtube_package import build_youtube_package
-from .script_review import write_review_report
-from .ollama_writer import draft_storyboard
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--topic", required=True)
     plan.add_argument("--audience", default="curious general audience")
 
-    storyboard = sub.add_parser("storyboard", help="create a four-scene, one-minute storyboard")
+    storyboard = sub.add_parser("storyboard", help="create an empty four-scene storyboard")
     storyboard.add_argument("--topic", required=True)
     storyboard.add_argument("--output", default="output/storyboard.json")
 
@@ -46,10 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
     clips.add_argument("--scene", action="append",
                        help="scene description; repeat four times to override storyboard scenes")
     clips.add_argument("--storyboard", default="output/storyboard.json",
-                       help="use the edited storyboard by default")
+                       help="use scene descriptions from this storyboard when present")
     clips.add_argument("--style", default="cinematic documentary, realistic detail, natural motion")
-    clips.add_argument("--storyboard", default="output/storyboard.json",
-                       help="use scene descriptions from the reviewed storyboard when present")
     clips.add_argument("--output", default="output/video-plan.json")
 
     submit = sub.add_parser("video-submit", help="submit clips to VidoGrid (uses credits)")
@@ -86,6 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     review = sub.add_parser("script-check", help="check script completeness, sources and claim references")
     review.add_argument("--storyboard", default="output/storyboard.json")
     review.add_argument("--output", default="output/script-review.json")
+
     return parser
 
 
@@ -110,23 +109,19 @@ def main() -> int:
 
     if args.command == "video-plan":
         storyboard_scenes = None
-        storyboard_path = Path(args.storyboard)
-        if not args.scene and storyboard_path.is_file():
-            storyboard_payload = json.loads(storyboard_path.read_text(encoding="utf-8"))
-            if storyboard_payload.get("topic") != args.topic:
-                raise SystemExit("Storyboard topic does not match --topic.")
-            storyboard_scenes = storyboard_payload.get("scenes", [])
-            scenes = [item["scene"] for item in storyboard_scenes]
-        else:
-            if args.scene:
+        if args.scene:
             scenes = args.scene
-        elif Path(args.storyboard).is_file():
-            storyboard_data = json.loads(Path(args.storyboard).read_text(encoding="utf-8"))
-            if storyboard_data.get("topic", args.topic) != args.topic:
-                raise SystemExit("Storyboard topic does not match --topic.")
-            scenes = [item["scene"] for item in storyboard_data.get("scenes", [])]
         else:
-            scenes = [item["scene"] for item in default_storyboard(args.topic)]
+            storyboard_path = Path(args.storyboard)
+            if storyboard_path.is_file():
+                storyboard_payload = json.loads(storyboard_path.read_text(encoding="utf-8"))
+                if storyboard_payload.get("topic") != args.topic:
+                    raise SystemExit("Storyboard topic does not match --topic.")
+                storyboard_scenes = storyboard_payload.get("scenes", [])
+                scenes = [item["scene"] for item in storyboard_scenes]
+            else:
+                scenes = [item["scene"] for item in default_storyboard(args.topic)]
+
         if len(scenes) != 4:
             raise SystemExit("The current one-minute preset requires exactly four scenes.")
         segments = build_segments(args.topic, scenes, args.style, duration_seconds=15)
@@ -135,10 +130,14 @@ def main() -> int:
             for index, scene in enumerate(storyboard_scenes):
                 segment_data[index]["narration"] = scene.get("narration_en", "")
                 segment_data[index]["subtitle"] = scene.get("subtitle_fa", "")
+
         payload = {
-            "topic": args.topic, "target_duration_seconds": 60,
-            "clip_duration_target_seconds": 15, "aspect_ratio": "16:9",
-            "visual_style": args.style, "segments": segment_data,
+            "topic": args.topic,
+            "target_duration_seconds": 60,
+            "clip_duration_target_seconds": 15,
+            "aspect_ratio": "16:9",
+            "visual_style": args.style,
+            "segments": segment_data,
         }
         target = Path(args.output)
         target.parent.mkdir(parents=True, exist_ok=True)
