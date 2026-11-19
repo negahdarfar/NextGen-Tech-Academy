@@ -8,10 +8,19 @@ on:
         required: false
         type: string
       upload:
-        description: "Upload the result to YouTube as private"
+        description: "Upload the finished video to YouTube"
         required: true
         default: true
         type: boolean
+      privacy_status:
+        description: "YouTube visibility for this manual run (scheduled runs remain private)"
+        required: true
+        default: public
+        type: choice
+        options:
+          - public
+          - unlisted
+          - private
   schedule:
     - cron: "17 6 * * 2,5"
 
@@ -38,8 +47,8 @@ jobs:
       AGNES_BASE_URL: https://apihub.agnes-ai.com/v1
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-      YOUTUBE_PRIVACY_STATUS: private
-      YOUTUBE_ALLOW_PUBLIC: "false"
+      YOUTUBE_PRIVACY_STATUS: ${{ github.event_name == 'workflow_dispatch' && inputs.privacy_status || 'private' }}
+      YOUTUBE_ALLOW_PUBLIC: ${{ github.event_name == 'workflow_dispatch' && inputs.privacy_status == 'public' && 'true' || 'false' }}
       TTS_VOICE: en-US-AriaNeural
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +61,7 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
           INPUT_UPLOAD: ${{ inputs.upload }}
+          INPUT_PRIVACY_STATUS: ${{ inputs.privacy_status }}
         run: |
           set -euo pipefail
           [ -n "$AGNES_API_KEY$PEXELS_API_KEY" ] || { echo "Configure AGNES_API_KEY (Agnes AI video) or PEXELS_API_KEY (free stock footage)."; exit 1; }
@@ -62,7 +72,18 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] || [ "$INPUT_UPLOAD" != "false" ]; then
             [ -n "$YOUTUBE_TOKEN_JSON" ] || { echo "Missing GitHub Actions Secret: YOUTUBE_TOKEN_JSON for private YouTube upload."; exit 1; }
           fi
-          echo "Required credential names are present; secret values were not printed."
+          printf 'Credential presence (values never shown): AGNES=%s GEMINI=%s GROQ=%s OPENROUTER=%s YOUTUBE=%s PEXELS=%s\\n' \\
+            "$([ -n "$AGNES_API_KEY" ] && echo yes || echo no)" \\
+            "$([ -n "$GEMINI_API_KEY" ] && echo yes || echo no)" \\
+            "$([ -n "$GROQ_API_KEY" ] && echo yes || echo no)" \\
+            "$([ -n "$OPENROUTER_API_KEY" ] && echo yes || echo no)" \\
+            "$([ -n "$YOUTUBE_TOKEN_JSON" ] && echo yes || echo no)" \\
+            "$([ -n "$PEXELS_API_KEY" ] && echo yes || echo no)"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$INPUT_PRIVACY_STATUS" = "public" ]; then
+            echo "Manual run is configured for PUBLIC YouTube visibility."
+          else
+            echo "This run is not configured for public visibility."
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: "22.22.2"
