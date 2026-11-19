@@ -1,4 +1,4 @@
-"""Command-line entry point for the one-minute video production workflow."""
+"""Command-line entry point for legacy short and resumable long-form video production."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from .youtube_package import build_youtube_package
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="nextgen-academy",
-        description="Produce one-minute, 16:9 technology documentary videos.",
+        description="Plan and produce AI-assisted YouTube videos and long-form technology documentaries.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
