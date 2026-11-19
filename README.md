@@ -31,7 +31,7 @@ Add repository Actions secrets:
 
 1. `AGNES_API_KEY` — preferred AI video provider (limited-time free promotion; check the provider console).
 2. `PEXELS_API_KEY` — free stock fallback (recommended).
-3. At least one of `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`.
+3. At least one LLM route: `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY`, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`.
 4. `YOUTUBE_TOKEN_JSON` — OAuth authorized-user JSON with the `youtube.upload` scope, only if uploading.
 
 Open Actions → Automated YouTube video factory → Run workflow. Supply a topic or leave it blank for RSS-based topic discovery. The workflow uploads privately by default and stores output artifacts for 14 days.
