@@ -1,72 +1,10 @@
 import pytest
 
-from nextgen_academy.automation import _require_free_credit_budget
+from nextgen_academy.automation import run_automated
 
 
-def test_credit_guard_requires_separate_free_balance(monkeypatch):
-    monkeypatch.setenv("VIDOGRID_CREDITS_PER_CLIP", "2")
-    with pytest.raises(RuntimeError, match="separate free/trial"):
-        _require_free_credit_budget({"balance": 100}, clips=4)
-
-
-def test_credit_guard_allows_only_sufficient_free_balance(monkeypatch):
-    monkeypatch.setenv("VIDOGRID_CREDITS_PER_CLIP", "2")
-    _require_free_credit_budget({"account": {"free_credits": 8}}, clips=4)
-    with pytest.raises(RuntimeError, match="Insufficient free"):
-        _require_free_credit_budget({"free_credits": 7}, clips=4)
-
-
-def test_credit_guard_requires_configured_cost(monkeypatch):
-    monkeypatch.delenv("VIDOGRID_CREDITS_PER_CLIP", raising=False)
-    with pytest.raises(RuntimeError, match="VIDOGRID_CREDITS_PER_CLIP"):
-        _require_free_credit_budget({"free_credits": 100}, clips=4)
-
-
-def test_credit_guard_prices_each_rotated_video_model(monkeypatch):
-    monkeypatch.setenv(
-        "VIDOGRID_MODEL_CREDIT_COSTS",
-        '{"grok-imagine-video-1.5-lite": 1, "veo-3.1-fast": 3}',
-    )
-    models = ["grok-imagine-video-1.5-lite", "veo-3.1-fast",
-              "grok-imagine-video-1.5-lite", "veo-3.1-fast"]
-    _require_free_credit_budget({"free_credits": 8}, models=models)
-    with pytest.raises(RuntimeError, match="Insufficient free"):
-        _require_free_credit_budget({"free_credits": 7}, models=models)
-
-
-def test_credit_guard_requires_cost_for_every_selected_model(monkeypatch):
-    monkeypatch.setenv("VIDOGRID_MODEL_CREDIT_COSTS", '{"grok-imagine-video-1.5-lite": 1}')
-    with pytest.raises(RuntimeError, match="veo-3.1-fast"):
-        _require_free_credit_budget(
-            {"free_credits": 100},
-            models=["grok-imagine-video-1.5-lite", "veo-3.1-fast"],
-        )
-
-
-def test_vidogrid_router_accepts_documented_model_families(monkeypatch):
-    from nextgen_academy.automation import _VidoGridRouter
-    monkeypatch.setenv("VIDOGRID_API_KEY", "fake-key")
-    monkeypatch.setenv("VIDOGRID_MODEL_ROTATION", "grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash")
-    router = _VidoGridRouter()
-    assert router.planned_models(4) == [
-        "grok-imagine-video-1.5-lite", "veo-3.1-fast",
-        "omni-1.2-flash", "grok-imagine-video-1.5-lite",
-    ]
-    assert router.clients["veo-3.1-fast"].settings.endpoint == "/video-gen/veo"
-
-
-def test_total_balance_requires_explicit_free_only_confirmation(monkeypatch):
-    monkeypatch.setenv("VIDOGRID_MODEL_CREDIT_COSTS", '{"grok-imagine-video-1.5-lite": 1}')
-    monkeypatch.delenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", raising=False)
-    with pytest.raises(RuntimeError, match="VIDOGRID_TOTAL_BALANCE_IS_FREE"):
-        _require_free_credit_budget(
-            {"balance": 10}, models=["grok-imagine-video-1.5-lite"]
-        )
-
-
-def test_total_balance_can_be_used_after_explicit_free_only_confirmation(monkeypatch):
-    monkeypatch.setenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", "true")
-    monkeypatch.setenv("VIDOGRID_MODEL_CREDIT_COSTS", '{"grok-imagine-video-1.5-lite": 2}')
-    _require_free_credit_budget(
-        {"account": {"balance": 8}}, models=["grok-imagine-video-1.5-lite"] * 4
-    )
+def test_cloud_pipeline_requires_a_visual_provider(monkeypatch, tmp_path):
+    monkeypatch.delenv("AGNES_API_KEY", raising=False)
+    monkeypatch.delenv("PEXELS_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="visual provider"):
+        run_automated("test topic", output_dir=tmp_path)

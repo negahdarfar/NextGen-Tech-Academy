@@ -1,20 +1,19 @@
-"""End-to-end automation entry point for GitHub-hosted runners."""
+"""End-to-end cloud automation using Agnes AI video with free Pexels fallback."""
 from __future__ import annotations
 
 import json
 import os
-from dataclasses import replace
 from pathlib import Path
 
 from .config import load_dotenv
+from .agnes_video import generate_scene_video
 from .cloud_tts import synthesize_cloud_narration
 from .cloud_writer import draft_cloud_storyboard
+from .pexels import download_scene_video
 from .research import discover_sources
 from .script import storyboard_subtitles
-from .video_jobs import submit_segments
-from .video_pipeline import poll_and_download, render_video, validate_render_duration
+from .video_pipeline import render_video, validate_render_duration
 from .video_segments import build_segments, segments_as_dicts
-from .vidogrid import VidoGridClient, VidoGridSettings
 from .youtube_package import build_youtube_package
 from .youtube_upload import upload_video, validate_youtube_credentials
 
@@ -22,16 +21,15 @@ from .youtube_upload import upload_video, validate_youtube_credentials
 def run_automated(topic: str = "", output_dir: str | Path = "output",
                   publish: bool = False) -> dict:
     load_dotenv()
+    agnes_key = os.getenv("AGNES_API_KEY", "").strip()
+    pexels_key = os.getenv("PEXELS_API_KEY", "").strip()
+    if not agnes_key and not pexels_key:
+        raise RuntimeError(
+            "Configure at least one visual provider: AGNES_API_KEY for Agnes AI video "
+            "(limited free 720p promotion; quota may change), or PEXELS_API_KEY for free stock footage."
+        )
     if publish:
         validate_youtube_credentials()
-
-    # Check VidoGrid access and the complete free-credit budget before spending
-    # any cloud LLM/TTS quota on research, writing, or narration.
-    client = VidoGridClient(VidoGridSettings.from_env())
-    account = client.account()
-    router = _VidoGridRouter()
-    planned_models = router.planned_models(4)
-    _require_free_credit_budget(account, models=planned_models)
 
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
@@ -60,24 +58,61 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         os.getenv("TTS_VOICE", "en-US-AriaNeural"),
     )
 
-    jobs_path = root / "vidogrid-jobs.json"
-    submit_segments(segments, router, jobs_path)
-    poll_and_download(
-        client, jobs_path, root / "clips",
-        timeout_seconds=int(os.getenv("VIDOGRID_TIMEOUT_SECONDS", "2400")),
-        poll_interval=int(os.getenv("VIDOGRID_POLL_INTERVAL", "10")),
+    jobs = []
+    providers_used = []
+    for index, segment in enumerate(segments, start=1):
+        clip_path = root / "clips" / f"clip_{index:03d}.mp4"
+        scene = scenes[index - 1]
+        source = None
+        if agnes_key:
+            try:
+                # Agnes Flash is free only under its current limited-time promotion.
+                # Four clips are queued serially to respect the public free RPM.
+                source = generate_scene_video(segment.prompt, clip_path, seconds=12)
+            except Exception as exc:
+                if not pexels_key:
+                    raise RuntimeError(
+                        f"Agnes generation failed for scene {index} and no Pexels fallback is configured: {exc}"
+                    ) from exc
+                print(f"Agnes scene {index} failed; falling back to Pexels: {exc}")
+        if source is None:
+            source = download_scene_video(scene["scene"], clip_path, min_duration=15)
+            source["provider"] = "pexels"
+        providers_used.append(source["provider"])
+        jobs.append({
+            "index": index,
+            "title": segment.title,
+            "duration_target_seconds": segment.duration_seconds,
+            "prompt": segment.prompt,
+            "status": "downloaded",
+            **source,
+        })
+    jobs_path = root / "video-jobs.json"
+    jobs_path.write_text(
+        json.dumps({"provider": "hybrid", "providers_used": providers_used,
+                    "status": "downloaded", "jobs": jobs},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
+
     render_video(jobs_path, root / "final-video.mp4",
                  root / "persian.srt", root / "narration.wav")
     actual_duration = validate_render_duration(root / "final-video.mp4")
 
     package_path = build_youtube_package(storyboard_path, root / "youtube-package.json")
     package = json.loads(package_path.read_text(encoding="utf-8"))
+    credits = []
+    for job in jobs:
+        if job.get("provider") == "pexels":
+            credits.append(f"- Pexels footage: {job.get('source_url', '')} "
+                           f"(photographer: {job.get('photographer', 'unknown')})")
     package["description"] = (
         f"Explore {topic} in this one-minute technology documentary.\n\n"
         "Sources discovered for this episode (review before public release):\n"
         + "\n".join(f"- {source['publisher']}: {source['title']} — {source['url']}"
                      for source in sources[:8])
+        + ("\n\nAI-generated scenes: Agnes AI Video 2.5 Flash.\n" if "agnes" in providers_used else "\n\nVisuals: Pexels stock footage.\n")
+        + "\n".join(credits)
         + "\n\nSubscribe for more technology explainers."
     )
     package["recommended_title"] = package["recommended_title"][:100]
@@ -88,6 +123,7 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         "video": str(root / "final-video.mp4"),
         "metadata": str(package_path),
         "source_count": len(sources),
+        "visual_providers_used": providers_used,
         "render_duration_seconds": actual_duration,
         "youtube_uploaded": False,
         "privacy_status": "not_uploaded",
@@ -101,126 +137,3 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
         result["youtube_uploaded"] = True
         result["privacy_status"] = uploaded["privacy_status"]
     return result
-
-
-def _require_free_credit_budget(account: dict, clips: int | None = None,
-                                models: list[str] | None = None) -> None:
-    """Fail closed unless API reports free credits and each selected model has a configured cost."""
-    free_keys = {
-        "free_credits", "free_balance", "bonus_credits",
-        "trial_credits", "promotional_credits",
-    }
-    balances: list[float] = []
-
-    def walk(value):
-        if isinstance(value, dict):
-            for key, item in value.items():
-                if key.lower() in free_keys and isinstance(item, (int, float)):
-                    balances.append(float(item))
-                walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                walk(item)
-
-    walk(account)
-    if not balances:
-        # VidoGrid's public API documentation describes an account credit balance,
-        # but does not promise a separate free/trial field. Only trust total balance
-        # when the account owner explicitly confirms it contains free credits only.
-        if os.getenv("VIDOGRID_TOTAL_BALANCE_IS_FREE", "").lower() != "true":
-            raise RuntimeError(
-                "VidoGrid did not expose a separate free/trial credit balance. "
-                "If you have verified that the entire account balance is free credits, "
-                "set VIDOGRID_TOTAL_BALANCE_IS_FREE=true. No jobs were submitted."
-            )
-        total_keys = {"balance", "credits", "credit_balance", "remaining_credits"}
-        def collect_total(value):
-            if isinstance(value, dict):
-                for key, item in value.items():
-                    if key.lower() in total_keys and isinstance(item, (int, float)):
-                        balances.append(float(item))
-                    collect_total(item)
-            elif isinstance(value, list):
-                for item in value:
-                    collect_total(item)
-        collect_total(account)
-        if not balances:
-            raise RuntimeError(
-                "No numeric VidoGrid account balance was found; no jobs were submitted."
-            )
-    configured_costs = os.getenv("VIDOGRID_MODEL_CREDIT_COSTS", "").strip()
-    costs: dict[str, float] = {}
-    if configured_costs:
-        try:
-            raw_costs = json.loads(configured_costs)
-            costs = {str(name): float(value) for name, value in raw_costs.items()}
-        except (ValueError, TypeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("VIDOGRID_MODEL_CREDIT_COSTS must be a JSON object of model-to-credit costs.") from exc
-    if models is not None:
-        missing = sorted(set(models) - set(costs))
-        if missing:
-            raise RuntimeError(
-                "Configure VIDOGRID_MODEL_CREDIT_COSTS for every selected model: "
-                + ", ".join(missing)
-            )
-        if any(value <= 0 for value in costs.values()):
-            raise RuntimeError("Every configured VidoGrid model credit cost must be greater than zero.")
-        required = sum(costs[name] for name in models)
-    else:
-        # Backward-compatible single-model mode for the existing tests/CLI.
-        try:
-            per_clip = float(os.environ["VIDOGRID_CREDITS_PER_CLIP"])
-        except (KeyError, ValueError) as exc:
-            raise RuntimeError(
-                "Set VIDOGRID_CREDITS_PER_CLIP or VIDOGRID_MODEL_CREDIT_COSTS from current VidoGrid pricing."
-            ) from exc
-        if per_clip <= 0:
-            raise RuntimeError("VIDOGRID_CREDITS_PER_CLIP must be greater than zero.")
-        required = per_clip * int(clips or 0)
-    available = min(balances)
-    if available < required:
-        raise RuntimeError(
-            f"Insufficient free VidoGrid credits: available={available}, "
-            f"estimated_required={required}. No jobs were submitted."
-        )
-
-
-class _VidoGridRouter:
-    """Select a configured VidoGrid model for each sequential clip."""
-    def __init__(self):
-        self.models = [
-            model.strip() for model in os.getenv(
-                "VIDOGRID_MODEL_ROTATION",
-                "grok-imagine-video-1.5-lite,veo-3.1-fast,omni-1.2-flash",
-            ).split(",") if model.strip()
-        ]
-        if not self.models:
-            raise RuntimeError("VIDOGRID_MODEL_ROTATION must contain at least one model.")
-        self.endpoints = {
-            "grok-imagine-video-1.5-lite": "/video-gen/grok-imagine-video-1.5-lite",
-            "grok-imagine-video-1.5": "/video-gen/grok-imagine-video-1.5",
-            "veo-3.1": "/video-gen/veo",
-            "veo-3.1-fast": "/video-gen/veo",
-            "omni-1.1-flash": "/video-gen/veo",
-            "omni-1.2-flash": "/video-gen/veo",
-        }
-        unsupported = set(self.models) - set(self.endpoints)
-        if unsupported:
-            raise RuntimeError(f"Unsupported VidoGrid video model(s): {sorted(unsupported)}")
-        self.index = 0
-        self.clients = {}
-        base = VidoGridSettings.from_env()
-        for model in self.models:
-            self.clients[model] = VidoGridClient(
-                replace(base, endpoint=self.endpoints[model], model=model)
-            )
-
-    def planned_models(self, count: int) -> list[str]:
-        return [self.models[index % len(self.models)] for index in range(count)]
-
-    def submit_video(self, prompt: str) -> dict:
-        model = self.models[self.index % len(self.models)]
-        self.index += 1
-        result = self.clients[model].submit_video(prompt)
-        result["selected_model"] = model
-        return result

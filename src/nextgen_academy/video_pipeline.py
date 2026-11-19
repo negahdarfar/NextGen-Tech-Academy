@@ -1,4 +1,4 @@
-"""Poll VidoGrid jobs, download clips, and assemble a one-minute MP4."""
+"""Validate downloaded media and assemble a one-minute MP4 with FFmpeg."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def extract_video_url(payload: dict[str, Any]) -> str:
                 if parsed.hostname in {"localhost"} or parsed.hostname.endswith(".local"):
                     continue
             return candidate
-    raise PipelineError("No HTTPS video download URL found in VidoGrid history response")
+    raise PipelineError("No HTTPS video download URL found in provider response")
 
 
 def _status(payload: dict[str, Any]) -> str:
@@ -86,7 +86,7 @@ def poll_and_download(client, jobs_manifest: str | Path, output_dir: str | Path,
             job["last_provider_response"] = payload
             job["status"] = state or "unknown"
             if state in {"failed", "error", "cancelled", "canceled"}:
-                raise PipelineError(f"VidoGrid job {job['job_uuid']} failed: {payload}")
+                raise PipelineError(f"Video provider job {job['job_uuid']} failed: {payload}")
             if state in {"done", "completed", "complete", "success", "succeeded", "finished"}:
                 url = extract_video_url(payload)
                 _download(url, clip_path)
@@ -98,7 +98,7 @@ def poll_and_download(client, jobs_manifest: str | Path, output_dir: str | Path,
             time.sleep(max(3, poll_interval))
         else:
             _save(manifest_path, manifest)
-            raise TimeoutError(f"Timed out waiting for VidoGrid job {job['job_uuid']}")
+            raise TimeoutError(f"Timed out waiting for Video provider job {job['job_uuid']}")
         _save(manifest_path, manifest)
 
     manifest["status"] = "downloaded"
@@ -155,7 +155,8 @@ def render_video(jobs_manifest: str | Path, output_file: str | Path,
             raise PipelineError(f"Missing downloaded clip: {source}")
         target = work / f"clip_{int(job['index']):03d}.mp4"
         command = [
-            ffmpeg, "-y", "-i", str(source), "-an",
+            ffmpeg, "-y", "-stream_loop", "-1", "-i", str(source), "-an",
+            "-t", str(job.get("duration_target_seconds", 15)),
             "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,"
                    "pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
             "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
