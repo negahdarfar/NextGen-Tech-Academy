@@ -1,72 +1,75 @@
-# NextGen-Tech-Academy
+# NextGen Tech Academy
 
-Cloud-first AI video production and YouTube upload automation. The cloud pipeline does **not** require Ollama, a local computer, or an always-on server.
+Cloud-first YouTube production toolkit for technology and education documentaries. The canonical repository contains two separate production paths: a legacy one-minute episode workflow and a resumable long-form documentary factory.
 
-## Target format
+## Long-form documentary factory
 
-- Standard YouTube 16:9 video, currently 60 seconds (not Shorts).
-- English narration and Persian subtitles.
-- Research, bilingual script, AI-generated scenes where free quota is available, stock-footage fallback, TTS, FFmpeg assembly, metadata and YouTube upload.
-- Cloud execution through GitHub Actions; manual dispatch or scheduled runs.
+- Landscape 16:9 output, 1920×1080 at 30 fps.
+- Documentary durations: 15, 30 or 60 minutes.
+- Eight planned chapters, English narration and Persian subtitles.
+- Chapter research leads, bilingual scripts, visual-shot plans, narration, stock/generated visuals, FFmpeg assembly and YouTube metadata.
+- Resumable chapter/shot checkpoints; completed assets are retained across retry attempts.
+- GitHub Actions cloud execution; no always-on laptop or VPS is required.
+- The production workflow is manual-dispatch only. It does not upload to YouTube.
 
-## Visual generation strategy
+The visual plan allocates 78, 153 or 303 shots for 15, 30 or 60 minutes respectively. A long-form run may therefore exceed free API quotas or GitHub runner limits; start with 15 minutes and check provider quotas first.
 
-1. **Primary: Agnes AI Video 2.5 Flash.** The provider currently documents a limited-time $0/second promotion for 720p output. It supports 4–12 second clips and a low free/default request rate. This promotion and quota can change or end; it is not a permanent free-production guarantee.
-2. **Fallback: Pexels stock footage.** Free API access to existing stock videos. It is not generative AI. The adapter uses it when Agnes is unavailable or no Agnes key is configured.
-3. The renderer loops short generated clips to fit the 15-second storyboard segment, then combines four scenes into the one-minute video. The manifest records which provider supplied every scene.
+## Zero-budget provider policy
 
-Agnes requires a free account and an API key stored as `AGNES_API_KEY` in GitHub Actions Secrets. Pexels requires `PEXELS_API_KEY`. Configure at least one visual provider; configure both for fallback resilience.
+The default long-form workflow is deliberately conservative:
 
-## Other providers and costs
+- **LLM:** FreeLLMAPI cloud gateway pair (`FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY`) or OpenRouter with `OPENROUTER_MODEL` explicitly ending in `:free`. Unknown or paid model pricing is rejected. No paid LLM fallback is enabled.
+- **Visuals:** Pexels API (`PEXELS_API_KEY`) in `auto`/Pexels mode. Pexels supplies licensed stock footage; it is not generative AI.
+- **Narration:** Edge TTS through the cloud optional dependency. Check the provider's current terms, voice usage rights and commercial-use conditions before monetization.
+- **Assembly:** FFmpeg on GitHub-hosted runners.
+- **Agnes:** Optional separate provider. It may incur charges if a promotion has ended; it is disabled unless explicitly selected and separately acknowledged. Do not treat any promotion as a permanent free tier.
 
-- **Language models:** Gemini, Groq and OpenRouter through the configured fallback chain. Free-tier access and quotas depend on provider account eligibility. OmniRoute is an optional gateway, not a source of free credits.
-- **Narration:** Edge TTS through the cloud optional dependency. This external service may be rate-limited; review its terms and voice usage rights before commercial use.
-- **Editing:** FFmpeg on GitHub-hosted runners. Standard runners are CPU-based; video generation is performed by the external API, not locally on GitHub.
+Free quotas, service availability and terms can change. GitHub Actions minutes, runner time, cache and artifact quotas also apply.
 
-No VidoGrid or LTX dependency is used.
+## Configure GitHub Actions
 
-## GitHub Actions setup
+Open **Settings → Secrets and variables → Actions** in this repository. Add secrets directly there; never paste credentials into chat, commit them, or place them in source files.
 
-Add repository Actions secrets:
+Required for the long-form zero-budget workflow:
 
-1. `AGNES_API_KEY` — preferred AI video provider (limited-time free promotion; check the provider console).
-2. `PEXELS_API_KEY` — free stock fallback (recommended).
-3. At least one LLM route: `FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY`, or `GEMINI_API_KEY`, `GROQ_API_KEY`, or `OPENROUTER_API_KEY`.
-4. `YOUTUBE_TOKEN_JSON` — OAuth authorized-user JSON with the `youtube.upload` scope, only if uploading.
+1. `FREELLMAPI_CLOUD_BASE_URL` and `FREELLMAPI_CLOUD_API_KEY`, **or** `OPENROUTER_API_KEY` plus repository variable `OPENROUTER_MODEL` ending in `:free`.
+2. `PEXELS_API_KEY`.
 
-Open Actions → Automated YouTube video factory → Run workflow. Supply a topic or leave it blank for RSS-based topic discovery. The workflow uploads privately by default and stores output artifacts for 14 days.
+Optional:
 
-The schedule is Tuesday and Friday at 06:17 UTC. GitHub-hosted runners execute the process even when the user's laptop is off. GitHub Actions minutes and artifact quotas still apply.
+- `AGNES_API_KEY` only if you deliberately choose the potentially chargeable Agnes provider and acknowledge its possible cost.
+- `YOUTUBE_TOKEN_JSON` only for the separate, human-approved upload step. It must be OAuth authorized-user JSON with YouTube upload scope; an API key is not a substitute.
 
-## Attribution and licensing
+### Start a long-form run
 
-- Agnes free-promotion access is not a promise of perpetual free use. Check the current account quota and terms before each production run.
-- Pexels content is existing stock footage. Follow Pexels API requirements and credit photographers where possible.
-- Review all model/provider terms for commercial use before monetizing output.
+1. Open **Actions → Long-form documentary factory → Run workflow**.
+2. Enter a documentary topic.
+3. Choose 15 minutes for the first end-to-end validation; 30/60 minutes can require many more provider requests.
+4. Keep visual provider as `auto` for Pexels-only zero-budget mode.
+5. Set `confirm_generation` to true only after checking credentials and quotas.
+6. Keep `allow_agnes_potential_cost` false.
 
-## YouTube publishing safeguards
+The workflow saves a resumable artifact even if a run fails. A retry with the same topic and duration can restore prior assets. The output is a private Actions artifact retained for 14 days; it is not automatically uploaded or published.
 
-- Upload is private by default.
-- Public visibility is blocked unless `YOUTUBE_ALLOW_PUBLIC=true` is explicitly set.
-- Upload uses resumable transfer.
-- Research collects RSS titles, summaries and links; it does not independently prove claims.
-- Human review of facts, source quality, translation, audio, footage rights, attribution, watermarks and final render is required before public release.
+## Human review and YouTube upload
 
-## Important limitations
+The factory stops after rendering `final-documentary.mp4` and creating `youtube-package.json`. Before upload, watch the entire video and verify:
 
-- The first cloud end-to-end run still needs validation against the Agnes/Pexels API key, cloud LLM keys, TTS endpoint and YouTube OAuth credentials.
-- Free API tiers and promotions vary by provider and can change.
-- Agnes Flash output is 720p and at most 12 seconds per generated clip; short clips are looped to match the storyboard timeline.
-- No public upload is enabled by default.
+- Claims against original, trustworthy sources (RSS entries are discovery leads, not fact-checking).
+- Persian translation and subtitle timing (timings are estimates and need correction).
+- Audio quality, factual context, visual continuity and chapter transitions.
+- Stock-footage licensing, attribution, AI/TTS provider terms and commercial-use rights.
 
+Mark every chapter `reviewed` only after completing that review. Then upload privately with `documentary-upload --approve-upload`. Public visibility additionally requires `--approve-public`. The production workflow itself never uploads.
 
-## Editorial skills and long-form tooling
+## Legacy one-minute workflow
 
-Selected MIT-licensed YouTube editorial skills and their helper scripts are vendored under `.claude/skills/`; see [docs/AGENT_SKILLS.md](docs/AGENT_SKILLS.md) for their purpose, commands, license, and execution limits. GitHub Actions does not execute agent skill files automatically.
+The repository also retains the separate `auto-publish.yml` / `auto-run` workflow for standard one-minute, 16:9 episodes. It has its own provider configuration and publishing safeguards; it is not the long-form factory. See [docs/PRODUCTION_PIPELINE.md](docs/PRODUCTION_PIPELINE.md) for the distinction and detailed commands.
 
-The current automated production workflow remains a one-minute 16:9 episode. A separate [documentary clip assembler](scripts/assemble_documentary.py) can join existing clips with optional narration and Persian subtitles, but it is only an assembly utility—not yet an end-to-end long-form documentary generator. See [docs/PRODUCTION_PIPELINE.md](docs/PRODUCTION_PIPELINE.md).
+## Repository quality status
 
+The latest verified CI run on commit `e91b40f388912d31b82b35de6a75dc39f8ddde72` completed successfully: 83 Python tests passed and the OmniRoute smoke job passed. This validates the code/test workflow, not a real external-provider documentary run. A real end-to-end production still requires the credentials above and a first 15-minute validation.
 
-### Optional free-model gateway
+## Editorial skills
 
-The LLM fallback chain can optionally use a cloud FreeLLMAPI-compatible endpoint through `FREELLMAPI_CLOUD_BASE_URL` and `FREELLMAPI_CLOUD_API_KEY`. It first inspects `GET /models` and calls only models explicitly marked free by their ID or structured catalogue pricing; unknown-price and paid models are skipped. This path does not use the Android phone or Tailscale. Secret values are not copied between repositories; configure the pair directly in the canonical repository's Actions Secrets if you want this optional route.
+Selected editorial skills and helper scripts are vendored under `.claude/skills/`. See [docs/AGENT_SKILLS.md](docs/AGENT_SKILLS.md). GitHub Actions does not execute agent skill files automatically.
