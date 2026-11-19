@@ -3,7 +3,7 @@ name: Python tests
 on:
   pull_request:
   push:
-    branches: [main, feat/initial-project-foundation]
+    branches: [main, feat/initial-project-foundation, feat/longform-documentary-factory]
   workflow_dispatch:
 
 jobs:
