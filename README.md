@@ -62,7 +62,13 @@ This asks for a second interactive confirmation. Generation may consume credits.
 nextgen-academy video-download
 ```
 
-8. Assemble the video with the Persian subtitle track and narration audio:
+8. Generate an editable YouTube metadata package (title options, description template, chapters, tags and thumbnail prompt):
+
+```bash
+nextgen-academy youtube-package
+```
+
+9. Assemble the video with the Persian subtitle track and narration audio:
 
 ```bash
 nextgen-academy video-render --subtitles output/persian.srt --narration-audio output/narration.wav
@@ -73,7 +79,7 @@ nextgen-academy video-render --subtitles output/persian.srt --narration-audio ou
 - Automated research source collection, fact-checking and script drafting (still manual at present).
 - Automatic voiceover generation is now wired to optional local Piper; a voice model must be installed and its license checked.
 - Background music and sound design.
-- Thumbnail generation, chapter/SEO package, analytics feedback loop.
+- Thumbnail image generation and analytics feedback loop. An editable SEO/publishing metadata draft is generated; it is not keyword research or a ranking guarantee.
 - YouTube OAuth and publishing (intentionally disabled until secure channel authorization and approval controls are built).
 
 The storyboard defaults are structural scene suggestions, not factual scripts. A human must verify claims, subtitles, licensing and final video before publishing.
