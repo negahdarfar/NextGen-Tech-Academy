@@ -8,11 +8,12 @@ from pathlib import Path
 
 from .config import Settings
 from .planning import build_plan, plan_as_dict
-from .script import default_storyboard, save_script_package
+from .script import default_storyboard, save_script_package, storyboard_subtitles
 from .video_jobs import submit_segments
 from .video_pipeline import poll_and_download, render_video, write_srt
 from .video_segments import VideoSegment, build_segments, segments_as_dicts
 from .vidogrid import VidoGridClient, VidoGridSettings
+from .tts import synthesize_storyboard
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -54,8 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--subtitles", default=None)
     render.add_argument("--narration-audio", default=None)
 
-    subs = sub.add_parser("subtitles", help="create an SRT subtitle track from scene narration")
-    subs.add_argument("--manifest", default="output/video-plan.json")
+    voice = sub.add_parser("voiceover", help="synthesize English narration locally with Piper")
+    voice.add_argument("--storyboard", default="output/storyboard.json")
+    voice.add_argument("--model", required=True, help="path to a Piper .onnx voice model")
+    voice.add_argument("--output", default="output/narration.wav")
+    voice.add_argument("--speaker-id", type=int, default=None)
+
+    subs = sub.add_parser("subtitles", help="create timed Persian subtitles from the storyboard")
+    subs.add_argument("--manifest", default="output/storyboard.json")
     subs.add_argument("--output", default="output/persian.srt")
     return parser
 
@@ -119,10 +126,15 @@ def main() -> int:
         print(f"Rendered final video: {path}")
         return 0
 
+    if args.command == "voiceover":
+        path = synthesize_storyboard(args.storyboard, args.output, args.model,
+                                     speaker_id=args.speaker_id)
+        print(f"Created English narration audio: {path}")
+        return 0
+
     if args.command == "subtitles":
-        payload = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-        write_srt(payload["segments"], args.output)
-        print(f"Created subtitle file: {args.output}")
+        path = storyboard_subtitles(args.manifest, args.output)
+        print(f"Created Persian subtitle file: {path}")
         return 0
 
     return 2
