@@ -1,4 +1,4 @@
-"""Regression tests for safe YouTube publishing defaults."""
+"""Regression tests for the explicitly configured public YouTube publishing policy."""
 from pathlib import Path
 
 WORKFLOW = (
@@ -9,22 +9,21 @@ WORKFLOW = (
 )
 
 
-def test_manual_publish_defaults_to_private():
+def test_manual_publish_defaults_to_public():
     source = WORKFLOW.read_text(encoding="utf-8")
-    privacy = source.split("privacy_status:", 1)[1].split("approve_publication:", 1)[0]
-    assert "default: private" in privacy
+    privacy = source.split("privacy_status:", 1)[1].split("schedule:", 1)[0]
+    assert "default: public" in privacy
+    assert "- public" in privacy
 
 
-def test_public_publish_requires_separate_explicit_approval():
+def test_public_visibility_is_enabled_for_manual_public_and_scheduled_runs():
     source = WORKFLOW.read_text(encoding="utf-8")
-    assert "approve_publication:" in source
-    assert "default: false" in source
-    assert "inputs.approve_publication == true" in source
-    assert "No video generation or upload will start." in source
+    assert "github.event_name == 'schedule' && 'public'" in source
+    assert "inputs.privacy_status == 'public'" in source
+    assert "YOUTUBE_ALLOW_PUBLIC:" in source
 
 
-def test_scheduled_runs_cannot_enable_public_visibility():
+def test_scheduled_runs_upload_publicly():
     source = WORKFLOW.read_text(encoding="utf-8")
-    assert "github.event_name == 'workflow_dispatch'" in source
-    assert "|| 'false'" in source
-    assert "scheduled runs remain private" in source
+    assert "github.event_name == 'schedule' || inputs.privacy_status == 'public'" in source
+    assert "Automatic public publishing enabled." in source
