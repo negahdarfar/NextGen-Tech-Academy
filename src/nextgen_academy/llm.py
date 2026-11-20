@@ -16,19 +16,23 @@ class LLMError(RuntimeError):
 
 def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
     errors = []
-    if os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip() and os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip():
-        try:
-            return _parse_json(_freellmapi(system_prompt, user_prompt))
-        except Exception as exc:
-            errors.append(f"FreeLLMAPI: {str(exc)[:300]}")
-            print(f"FreeLLMAPI unavailable; trying verified OpenRouter free models: {exc}")
     if os.getenv("OPENROUTER_API_KEY", "").strip():
         try:
             return _parse_json(_openrouter_free(system_prompt, user_prompt))
         except Exception as exc:
             errors.append(f"OpenRouter free tier: {str(exc)[:300]}")
-    raise LLMError("No configured free LLM route succeeded. " + " | ".join(errors))
-
+            print(f"OpenRouter free models unavailable; checking explicitly free FreeLLMAPI model: {exc}")
+    configured_model = os.getenv("FREELLMAPI_MODEL", "").strip()
+    if (os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip()
+            and os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip()
+            and configured_model.endswith(":free")):
+        try:
+            return _parse_json(_freellmapi(system_prompt, user_prompt))
+        except Exception as exc:
+            errors.append(f"FreeLLMAPI free model: {str(exc)[:300]}")
+    elif os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip():
+        errors.append("FreeLLMAPI skipped: set FREELLMAPI_MODEL to a model ID ending in :free; auto/unknown pricing is blocked.")
+    raise LLMError("No verified zero-priced LLM route succeeded. " + " | ".join(errors))
 
 def _freellmapi(system_prompt: str, user_prompt: str) -> str:
     base_url = os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip().rstrip("/")
@@ -37,7 +41,7 @@ def _freellmapi(system_prompt: str, user_prompt: str) -> str:
         raise LLMError("FreeLLMAPI cloud URL and API key must both be configured.")
     if not base_url.startswith(("http://", "https://")):
         raise LLMError("FREELLMAPI_CLOUD_BASE_URL must be an http(s) URL.")
-    model = os.getenv("FREELLMAPI_MODEL", "auto").strip() or "auto"
+    model = os.getenv("FREELLMAPI_MODEL", "").strip()\n    if not model.endswith(":free"):\n        raise LLMError("FreeLLMAPI model must be explicitly configured with a :free suffix.")
     if base_url.endswith("/chat/completions"):
         endpoint = base_url
     elif base_url.endswith("/v1"):
