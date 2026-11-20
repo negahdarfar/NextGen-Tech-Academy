@@ -5,7 +5,7 @@ from nextgen_academy.llm import LLMError, _parse_json, generate_json
 
 
 def test_parse_json_from_fenced_response():
-    assert _parse_json("```json\\n{\"ok\": true}\\n```") == {"ok": True}
+    assert _parse_json("```json\n{\"ok\": true}\n```") == {"ok": True}
 
 
 def test_generate_json_uses_only_freellmapi(monkeypatch):
