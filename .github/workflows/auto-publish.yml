@@ -40,7 +40,7 @@ jobs:
       FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
       FREELLMAPI_MODEL: ${{ vars.FREELLMAPI_MODEL || 'auto' }}
       ALLOW_PAID_LLM: "false"
-      LLM_PROVIDER_ORDER: freellmapi
+      LLM_PROVIDER_ORDER: freellmapi,agnes
       AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
       AGNES_BASE_URL: https://apihub.agnes-ai.com/v1
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
