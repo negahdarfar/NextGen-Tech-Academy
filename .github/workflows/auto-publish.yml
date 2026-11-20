@@ -56,6 +56,7 @@ jobs:
         env:
           FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
           FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
+          FREELLMAPI_MODEL: ${{ vars.FREELLMAPI_MODEL || 'auto' }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
@@ -64,8 +65,8 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$PEXELS_API_KEY" ] || { echo "Zero-budget visual production requires PEXELS_API_KEY; Agnes is disabled to prevent charges."; exit 1; }
-          if { [ -z "$FREELLMAPI_CLOUD_BASE_URL" ] || [ -z "$FREELLMAPI_CLOUD_API_KEY" ]; } && [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "Configure FreeLLMAPI cloud credentials or OPENROUTER_API_KEY (free models are verified against live zero pricing)."
+          if [ -z "$OPENROUTER_API_KEY" ] && [[ "$FREELLMAPI_MODEL" != *:free ]]; then
+            echo "Configure OPENROUTER_API_KEY or set FREELLMAPI_MODEL to an explicitly free model ID ending in :free. Auto/unknown pricing is blocked."
             exit 1
           fi
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] || [ "$INPUT_UPLOAD" != "false" ]; then
