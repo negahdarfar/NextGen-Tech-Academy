@@ -1,4 +1,4 @@
-"""FreeLLMAPI-only cloud LLM adapter; no direct provider fallback."""
+"""FreeLLMAPI-only cloud LLM adapter; routing stays inside the gateway."""
 from __future__ import annotations
 
 import json
@@ -6,21 +6,19 @@ import os
 import urllib.request
 from typing import Any
 
-from .free_model_router import discover_free_models
-
 
 class LLMError(RuntimeError):
     pass
 
 
 def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
-    """Generate structured text exclusively through explicitly free FreeLLMAPI models."""
+    """Generate structured text through FreeLLMAPI's own model router."""
     raw = _freellmapi(system_prompt, user_prompt)
     return _parse_json(raw)
 
 
 def _freellmapi(system_prompt: str, user_prompt: str) -> str:
-    """Use only models explicitly identified as free by the FreeLLMAPI catalogue."""
+    """Ask FreeLLMAPI to route 'auto' (or an explicitly configured model)."""
     base_url = os.getenv("FREELLMAPI_CLOUD_BASE_URL", "").strip().rstrip("/")
     api_key = os.getenv("FREELLMAPI_CLOUD_API_KEY", "").strip()
     if not base_url or not api_key:
@@ -28,11 +26,7 @@ def _freellmapi(system_prompt: str, user_prompt: str) -> str:
     if not base_url.startswith(("http://", "https://")):
         raise LLMError("FREELLMAPI_CLOUD_BASE_URL must be an http(s) URL.")
 
-    preferred = os.getenv("FREELLMAPI_MODEL", "auto").strip() or "auto"
-    models = discover_free_models(base_url, api_key, task="general", preferred=preferred)
-    if not models:
-        raise LLMError("FreeLLMAPI catalogue exposed no explicitly free models; paid or unknown-price models were skipped.")
-
+    model = os.getenv("FREELLMAPI_MODEL", "auto").strip() or "auto"
     if base_url.endswith("/chat/completions"):
         endpoint = base_url
     elif base_url.endswith("/v1"):
@@ -40,13 +34,10 @@ def _freellmapi(system_prompt: str, user_prompt: str) -> str:
     else:
         endpoint = base_url + "/v1/chat/completions"
 
-    failures = []
-    for model in models:
-        try:
-            return _openai_compatible(endpoint, api_key, model, system_prompt, user_prompt)
-        except Exception as exc:
-            failures.append(f"{model}: {str(exc)[:200]}")
-    raise LLMError("All explicitly free FreeLLMAPI models failed: " + " | ".join(failures))
+    try:
+        return _openai_compatible(endpoint, api_key, model, system_prompt, user_prompt)
+    except Exception as exc:
+        raise LLMError(f"FreeLLMAPI request failed (model={model}): {str(exc)[:500]}") from exc
 
 
 def _openai_compatible(url: str, key: str, model: str, system_prompt: str, user_prompt: str) -> str:
