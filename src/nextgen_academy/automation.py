@@ -1,4 +1,4 @@
-"""End-to-end cloud automation using Agnes AI video with free Pexels fallback."""
+"""End-to-end zero-budget cloud automation with explicitly opt-in paid video provider."""
 from __future__ import annotations
 
 import json
@@ -23,10 +23,11 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
     load_dotenv()
     agnes_key = os.getenv("AGNES_API_KEY", "").strip()
     pexels_key = os.getenv("PEXELS_API_KEY", "").strip()
-    if not agnes_key and not pexels_key:
+    allow_agnes = os.getenv("ALLOW_AGNES_POTENTIAL_COST", "false").lower() == "true"
+    if not pexels_key and not (agnes_key and allow_agnes):
         raise RuntimeError(
-            "Configure at least one visual provider: AGNES_API_KEY for Agnes AI video "
-            "(limited free 720p promotion; quota may change), or PEXELS_API_KEY for free stock footage."
+            "Zero-budget mode requires PEXELS_API_KEY. Agnes is never called unless "
+            "ALLOW_AGNES_POTENTIAL_COST=true is explicitly set."
         )
     if publish:
         validate_youtube_credentials()
@@ -49,91 +50,60 @@ def run_automated(topic: str = "", output_dir: str | Path = "output",
 
     (root / "video-plan.json").write_text(
         json.dumps({"topic": topic, "target_duration_seconds": 60,
-                    "segments": segment_data}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+                    "segments": segment_data}, ensure_ascii=False, indent=2), encoding="utf-8")
     storyboard_subtitles(storyboard_path, root / "persian.srt")
-    synthesize_cloud_narration(
-        storyboard_path, root / "narration.wav",
-        os.getenv("TTS_VOICE", "en-US-AriaNeural"),
-    )
+    synthesize_cloud_narration(storyboard_path, root / "narration.wav",
+                               os.getenv("TTS_VOICE", "en-US-AriaNeural"))
 
-    jobs = []
-    providers_used = []
+    jobs, providers_used = [], []
     for index, segment in enumerate(segments, start=1):
         clip_path = root / "clips" / f"clip_{index:03d}.mp4"
         scene = scenes[index - 1]
         source = None
-        if agnes_key:
+        if agnes_key and allow_agnes:
             try:
-                # Agnes Flash is free only under its current limited-time promotion.
-                # Four clips are queued serially to respect the public free RPM.
                 source = generate_scene_video(segment.prompt, clip_path, seconds=12)
             except Exception as exc:
                 if not pexels_key:
-                    raise RuntimeError(
-                        f"Agnes generation failed for scene {index} and no Pexels fallback is configured: {exc}"
-                    ) from exc
+                    raise RuntimeError(f"Opt-in Agnes generation failed for scene {index}: {exc}") from exc
                 print(f"Agnes scene {index} failed; falling back to Pexels: {exc}")
         if source is None:
             source = download_scene_video(scene["scene"], clip_path, min_duration=15)
             source["provider"] = "pexels"
         providers_used.append(source["provider"])
-        jobs.append({
-            "index": index,
-            "title": segment.title,
-            "duration_target_seconds": segment.duration_seconds,
-            "prompt": segment.prompt,
-            "status": "downloaded",
-            **source,
-        })
-    jobs_path = root / "video-jobs.json"
-    jobs_path.write_text(
-        json.dumps({"provider": "hybrid", "providers_used": providers_used,
-                    "status": "downloaded", "jobs": jobs},
-                   ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+        jobs.append({"index": index, "title": segment.title,
+                     "duration_target_seconds": segment.duration_seconds,
+                     "prompt": segment.prompt, "status": "downloaded", **source})
 
-    render_video(jobs_path, root / "final-video.mp4",
-                 root / "persian.srt", root / "narration.wav")
+    jobs_path = root / "video-jobs.json"
+    jobs_path.write_text(json.dumps({"provider": "hybrid", "providers_used": providers_used,
+                                     "status": "downloaded", "jobs": jobs},
+                                    ensure_ascii=False, indent=2), encoding="utf-8")
+    render_video(jobs_path, root / "final-video.mp4", root / "persian.srt", root / "narration.wav")
     actual_duration = validate_render_duration(root / "final-video.mp4")
 
     package_path = build_youtube_package(storyboard_path, root / "youtube-package.json")
     package = json.loads(package_path.read_text(encoding="utf-8"))
-    credits = []
-    for job in jobs:
-        if job.get("provider") == "pexels":
-            credits.append(f"- Pexels footage: {job.get('source_url', '')} "
-                           f"(photographer: {job.get('photographer', 'unknown')})")
+    credits = [f"- Pexels footage: {job.get('source_url', '')} (photographer: {job.get('photographer', 'unknown')})"
+               for job in jobs if job.get("provider") == "pexels"]
     package["description"] = (
         f"Explore {topic} in this one-minute technology documentary.\n\n"
-        "Sources discovered for this episode (review before public release):\n"
-        + "\n".join(f"- {source['publisher']}: {source['title']} — {source['url']}"
-                     for source in sources[:8])
-        + ("\n\nAI-generated scenes: Agnes AI Video 2.5 Flash.\n" if "agnes" in providers_used else "\n\nVisuals: Pexels stock footage.\n")
-        + "\n".join(credits)
-        + "\n\nSubscribe for more technology explainers."
+        "Sources discovered for this episode (verify before monetization):\n"
+        + "\n".join(f"- {s['publisher']}: {s['title']} — {s['url']}" for s in sources[:8])
+        + ("\n\nAI-generated scenes: Agnes AI Video 2.5 Flash.\n" if "agnes" in providers_used
+           else "\n\nVisuals: Pexels stock footage.\n")
+        + "\n".join(credits) + "\n\nSubscribe for more technology explainers."
     )
     package["recommended_title"] = package["recommended_title"][:100]
     package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    result = {
-        "topic": topic,
-        "video": str(root / "final-video.mp4"),
-        "metadata": str(package_path),
-        "source_count": len(sources),
-        "visual_providers_used": providers_used,
-        "render_duration_seconds": actual_duration,
-        "youtube_uploaded": False,
-        "privacy_status": "not_uploaded",
-    }
+    result = {"topic": topic, "video": str(root / "final-video.mp4"),
+              "metadata": str(package_path), "source_count": len(sources),
+              "visual_providers_used": providers_used, "render_duration_seconds": actual_duration,
+              "youtube_uploaded": False, "privacy_status": "not_uploaded"}
     if publish:
-        uploaded = upload_video(
-            root / "final-video.mp4", package_path,
-            privacy_status=os.getenv("YOUTUBE_PRIVACY_STATUS", "private"),
-        )
-        result["youtube"] = uploaded
-        result["youtube_uploaded"] = True
-        result["privacy_status"] = uploaded["privacy_status"]
+        uploaded = upload_video(root / "final-video.mp4", package_path,
+                                privacy_status=os.getenv("YOUTUBE_PRIVACY_STATUS", "private"))
+        result.update({"youtube": uploaded, "youtube_uploaded": True,
+                       "privacy_status": uploaded["privacy_status"]})
     return result
