@@ -1,44 +1,35 @@
-import json
-from unittest.mock import patch
-
 import pytest
+from unittest.mock import patch
 
 from nextgen_academy.llm import LLMError, _parse_json, generate_json
 
 
 def test_parse_json_from_fenced_response():
-    assert _parse_json("```json\n{\"ok\": true}\n```") == {"ok": True}
+    assert _parse_json("```json\\n{\\\"ok\\\": true}\\n```") == {"ok": True}
 
 
-def test_cloud_provider_fallback_uses_first_configured_key(monkeypatch):
-    monkeypatch.setenv("LLM_PROVIDER_ORDER", "gemini,groq")
-    monkeypatch.setenv("GEMINI_API_KEY", "fake")
-    monkeypatch.setenv("GROQ_API_KEY", "fake2")
-    with patch("nextgen_academy.llm._gemini", side_effect=RuntimeError("temporary")):
-        with patch("nextgen_academy.llm._openai_compatible", return_value='{"scenes": []}') as fallback:
-            assert generate_json("system", "user") == {"scenes": []}
-            fallback.assert_called_once()
-
-
-def test_cloud_llm_fails_when_no_provider_is_configured(monkeypatch):
-    for key in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY"):
-        monkeypatch.delenv(key, raising=False)
-    with pytest.raises(LLMError, match="No cloud LLM"):
-        generate_json("system", "user")
-
-
-def test_openrouter_paid_model_is_blocked_by_default(monkeypatch):
-    monkeypatch.setenv("LLM_PROVIDER_ORDER", "openrouter")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
-    monkeypatch.delenv("ALLOW_PAID_LLM", raising=False)
-    with pytest.raises(LLMError, match="All configured LLM providers failed"):
-        generate_json("system", "user")
-
-
-def test_openrouter_free_model_is_allowed(monkeypatch):
-    monkeypatch.setenv("LLM_PROVIDER_ORDER", "openrouter")
-    monkeypatch.setenv("OPENROUTER_API_KEY", "fake")
-    monkeypatch.setenv("OPENROUTER_MODEL", "example/model:free")
-    with patch("nextgen_academy.llm._openai_compatible", return_value='{"ok": true}'):
+def test_generate_json_uses_only_freellmapi(monkeypatch):
+    monkeypatch.setenv("FREELLMAPI_CLOUD_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.setenv("FREELLMAPI_CLOUD_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_PROVIDER_ORDER", "gemini,groq,openrouter")
+    monkeypatch.setenv("GEMINI_API_KEY", "must-not-be-used")
+    with patch("nextgen_academy.llm._freellmapi", return_value='{"ok": true}') as free:
         assert generate_json("system", "user") == {"ok": True}
+        free.assert_called_once_with("system", "user")
+
+
+def test_generate_json_does_not_fallback_when_freellmapi_fails(monkeypatch):
+    monkeypatch.setenv("FREELLMAPI_CLOUD_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.setenv("FREELLMAPI_CLOUD_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "must-not-be-used")
+    with patch("nextgen_academy.llm._freellmapi", side_effect=RuntimeError("gateway down")):
+        with pytest.raises(RuntimeError, match="gateway down"):
+            generate_json("system", "user")
+
+
+def test_generate_json_requires_freellmapi_even_if_other_keys_exist(monkeypatch):
+    monkeypatch.delenv("FREELLMAPI_CLOUD_BASE_URL", raising=False)
+    monkeypatch.delenv("FREELLMAPI_CLOUD_API_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "other-provider-key")
+    with pytest.raises(LLMError, match="FreeLLMAPI cloud URL and API key"):
+        generate_json("system", "user")
