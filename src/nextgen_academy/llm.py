@@ -1,4 +1,4 @@
-"""FreeLLMAPI-only cloud LLM adapter; no direct provider fallback."""
+"""Cloud LLM adapter with explicitly-free FreeLLMAPI first and Agnes fallback."""
 from __future__ import annotations
 
 import json
@@ -14,9 +14,29 @@ class LLMError(RuntimeError):
 
 
 def generate_json(system_prompt: str, user_prompt: str) -> dict[str, Any]:
-    """Generate structured text exclusively through explicitly free FreeLLMAPI models."""
-    raw = _freellmapi(system_prompt, user_prompt)
-    return _parse_json(raw)
+    """Try configured providers in order; never silently select unknown-price FreeLLMAPI models."""
+    providers = {
+        "freellmapi": _freellmapi,
+        "agnes": _agnes,
+    }
+    order = [
+        item.strip().lower()
+        for item in os.getenv("LLM_PROVIDER_ORDER", "freellmapi,agnes").split(",")
+        if item.strip()
+    ]
+    failures: list[str] = []
+    for provider in order:
+        generate = providers.get(provider)
+        if generate is None:
+            failures.append(f"{provider}: unsupported provider")
+            continue
+        try:
+            raw = generate(system_prompt, user_prompt)
+            return _parse_json(raw)
+        except Exception as exc:
+            failures.append(f"{provider}: {str(exc)[:300]}")
+            print(f"LLM provider {provider} failed; trying next configured provider.", flush=True)
+    raise LLMError("All configured LLM providers failed: " + " | ".join(failures))
 
 
 def _freellmapi(system_prompt: str, user_prompt: str) -> str:
@@ -33,13 +53,7 @@ def _freellmapi(system_prompt: str, user_prompt: str) -> str:
     if not models:
         raise LLMError("FreeLLMAPI catalogue exposed no explicitly free models; paid or unknown-price models were skipped.")
 
-    if base_url.endswith("/chat/completions"):
-        endpoint = base_url
-    elif base_url.endswith("/v1"):
-        endpoint = base_url + "/chat/completions"
-    else:
-        endpoint = base_url + "/v1/chat/completions"
-
+    endpoint = _chat_endpoint(base_url)
     failures = []
     for model in models:
         try:
@@ -47,6 +61,26 @@ def _freellmapi(system_prompt: str, user_prompt: str) -> str:
         except Exception as exc:
             failures.append(f"{model}: {str(exc)[:200]}")
     raise LLMError("All explicitly free FreeLLMAPI models failed: " + " | ".join(failures))
+
+
+def _agnes(system_prompt: str, user_prompt: str) -> str:
+    """Use Agnes' OpenAI-compatible text endpoint as the configured secondary provider."""
+    api_key = os.getenv("AGNES_API_KEY", "").strip()
+    if not api_key:
+        raise LLMError("Agnes fallback selected but AGNES_API_KEY is not configured.")
+    base_url = os.getenv("AGNES_BASE_URL", "https://apihub.agnes-ai.com/v1").strip().rstrip("/")
+    if not base_url.startswith(("http://", "https://")):
+        raise LLMError("AGNES_BASE_URL must be an http(s) URL.")
+    model = os.getenv("AGNES_LLM_MODEL", "agnes-2.5-flash").strip() or "agnes-2.5-flash"
+    return _openai_compatible(_chat_endpoint(base_url), api_key, model, system_prompt, user_prompt)
+
+
+def _chat_endpoint(base_url: str) -> str:
+    if base_url.endswith("/chat/completions"):
+        return base_url
+    if base_url.endswith("/v1"):
+        return base_url + "/chat/completions"
+    return base_url + "/v1/chat/completions"
 
 
 def _openai_compatible(url: str, key: str, model: str, system_prompt: str, user_prompt: str) -> str:
@@ -77,7 +111,7 @@ def _parse_json(raw: str) -> dict[str, Any]:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise LLMError("FreeLLMAPI did not return valid JSON") from exc
+        raise LLMError("LLM provider did not return valid JSON") from exc
     if not isinstance(data, dict):
-        raise LLMError("FreeLLMAPI JSON root must be an object")
+        raise LLMError("LLM provider JSON root must be an object")
     return data
