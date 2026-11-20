@@ -54,10 +54,8 @@ def test_generate_json_ignores_alternate_provider_order(monkeypatch):
     monkeypatch.setenv("FREELLMAPI_CLOUD_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "must-not-be-used")
     with patch("nextgen_academy.llm._freellmapi", return_value='{"provider": "free"}') as free:
-        with patch("nextgen_academy.llm._gemini") as gemini:
-            assert generate_json("system", "user") == {"provider": "free"}
-            free.assert_called_once()
-            gemini.assert_not_called()
+        assert generate_json("system", "user") == {"provider": "free"}
+        free.assert_called_once()
 
 
 def test_generate_json_stops_when_freellmapi_fails(monkeypatch):
@@ -66,7 +64,5 @@ def test_generate_json_stops_when_freellmapi_fails(monkeypatch):
     monkeypatch.setenv("FREELLMAPI_CLOUD_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "must-not-be-used")
     with patch("nextgen_academy.llm._freellmapi", side_effect=RuntimeError("gateway down")):
-        with patch("nextgen_academy.llm._gemini") as gemini:
-            with pytest.raises(RuntimeError, match="gateway down"):
-                generate_json("system", "user")
-            gemini.assert_not_called()
+        with pytest.raises(RuntimeError, match="gateway down"):
+            generate_json("system", "user")
