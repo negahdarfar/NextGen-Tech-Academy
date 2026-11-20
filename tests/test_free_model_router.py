@@ -74,3 +74,36 @@ def test_generate_json_stops_when_freellmapi_fails(monkeypatch):
     with patch("nextgen_academy.llm._freellmapi", side_effect=RuntimeError("gateway down")):
         with pytest.raises(RuntimeError, match="gateway down"):
             generate_json("system", "user")
+
+
+@patch("nextgen_academy.llm.time.sleep")
+def test_openai_compatible_retries_transient_502_then_succeeds(sleep):
+    from io import BytesIO
+    from urllib.error import HTTPError
+    from unittest.mock import MagicMock
+    from nextgen_academy.llm import _openai_compatible
+
+    error = HTTPError("https://gateway.example/v1/chat/completions", 502, "Bad Gateway", {}, BytesIO(b""))
+    response = MagicMock()
+    response.__enter__.return_value.read.return_value = json.dumps({
+        "choices": [{"message": {"content": '{"ok": true}'}}]
+    }).encode()
+    with patch("nextgen_academy.llm.urllib.request.urlopen", side_effect=[error, response]) as urlopen:
+        result = _openai_compatible("https://gateway.example/v1/chat/completions", "key", "auto", "s", "u")
+    assert result == '{"ok": true}'
+    assert urlopen.call_count == 2
+    sleep.assert_called_once_with(1)
+
+
+@patch("nextgen_academy.llm.time.sleep")
+def test_openai_compatible_does_not_retry_permanent_400(sleep):
+    from io import BytesIO
+    from urllib.error import HTTPError
+    from nextgen_academy.llm import _openai_compatible
+
+    error = HTTPError("https://gateway.example/v1/chat/completions", 400, "Bad Request", {}, BytesIO(b""))
+    with patch("nextgen_academy.llm.urllib.request.urlopen", side_effect=error) as urlopen:
+        with pytest.raises(HTTPError):
+            _openai_compatible("https://gateway.example/v1/chat/completions", "key", "auto", "s", "u")
+    urlopen.assert_called_once()
+    sleep.assert_not_called()
