@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import urllib.error
 import urllib.request
 from typing import Any
 
@@ -56,9 +58,24 @@ def _openai_compatible(url: str, key: str, model: str, system_prompt: str, user_
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=180) as response:
-        data = json.loads(response.read().decode("utf-8"))
-    return data["choices"][0]["message"]["content"]
+
+    # Gateways occasionally return transient 429/5xx responses. Retry those only;
+    # authentication, validation and other permanent 4xx errors fail immediately.
+    retryable_statuses = {429, 500, 502, 503, 504}
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as exc:
+            if exc.code not in retryable_statuses or attempt == 3:
+                raise
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            try:
+                delay = min(max(float(retry_after), 0.0), 15.0) if retry_after else 2 ** attempt
+            except ValueError:
+                delay = 2 ** attempt
+            time.sleep(delay)
 
 
 def _parse_json(raw: str) -> dict[str, Any]:
