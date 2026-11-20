@@ -73,7 +73,7 @@ def _openai_compatible(url: str, key: str, model: str, system_prompt: str, user_
 def _parse_json(raw: str) -> dict[str, Any]:
     text = raw.strip()
     if text.startswith("```"):
-        text = text.split("\\n", 1)[-1].rsplit("```", 1)[0].strip()
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
