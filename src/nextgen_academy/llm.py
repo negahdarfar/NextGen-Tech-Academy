@@ -1,4 +1,4 @@
-""""FreeLLMAPI-only cloud LLM adapter; routing stays inside the gateway."""
+"""FreeLLMAPI-only cloud LLM adapter; routing stays inside the gateway."""
 from __future__ import annotations
 
 import json
