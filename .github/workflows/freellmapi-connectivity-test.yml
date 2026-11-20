@@ -1,0 +1,86 @@
+name: FreeLLMAPI Connectivity Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: freellmapi-connectivity-test
+  cancel-in-progress: true
+
+jobs:
+  test-chat-completions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Test FreeLLMAPI chat completion
+        env:
+          FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
+          FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          base = os.environ.get("FREELLMAPI_CLOUD_BASE_URL", "").strip().rstrip("/")
+          key = os.environ.get("FREELLMAPI_CLOUD_API_KEY", "").strip()
+
+          if not base or not key:
+              print("FAILED: GitHub repository secrets are missing or empty.")
+              sys.exit(1)
+
+          url = base + "/chat/completions"
+          payload = {
+              "model": "auto",
+              "messages": [
+                  {
+                      "role": "user",
+                      "content": "Reply with exactly: FreeLLMAPI connection successful."
+                  }
+              ],
+              "temperature": 0
+          }
+          request = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Authorization": "Bearer " + key,
+                  "Content-Type": "application/json"
+              },
+              method="POST"
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=75) as response:
+                  raw = response.read().decode("utf-8", errors="replace")
+                  data = json.loads(raw)
+                  choices = data.get("choices") or []
+                  message = (choices[0].get("message") or {}) if choices else {}
+                  answer = message.get("content", "")
+                  if isinstance(answer, list):
+                      answer = " ".join(
+                          part.get("text", "") for part in answer
+                          if isinstance(part, dict)
+                      )
+                  if not answer:
+                      print("FAILED: API returned HTTP success but no assistant text.")
+                      print("Response keys:", ", ".join(sorted(data.keys())))
+                      sys.exit(1)
+                  print("SUCCESS: FreeLLMAPI returned a chat completion.")
+                  print("Model:", data.get("model", "not reported"))
+                  print("Assistant:", str(answer)[:500])
+          except urllib.error.HTTPError as exc:
+              print("FAILED: HTTP", exc.code, exc.reason)
+              detail = exc.read(2000).decode("utf-8", errors="replace")
+              if detail:
+                  print("API error:", detail)
+              sys.exit(1)
+          except Exception as exc:
+              print("FAILED:", type(exc).__name__, str(exc)[:500])
+              sys.exit(1)
+          PY
