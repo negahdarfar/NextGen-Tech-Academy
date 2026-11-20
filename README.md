@@ -18,8 +18,8 @@ The visual plan allocates 78, 153 or 303 shots for 15, 30 or 60 minutes respecti
 
 The default long-form workflow is deliberately conservative:
 
-- **LLM:** FreeLLMAPI cloud gateway pair (`FREELLMAPI_CLOUD_BASE_URL` + `FREELLMAPI_CLOUD_API_KEY`) or OpenRouter with `OPENROUTER_MODEL` explicitly ending in `:free`. Unknown or paid model pricing is rejected. No paid LLM fallback is enabled.
-- **Visuals:** Pexels API (`PEXELS_API_KEY`) in `auto`/Pexels mode. Pexels supplies licensed stock footage; it is not generative AI.
+- **LLM:** The one-minute and long-form runners try the configured FreeLLMAPI gateway first, then can rotate across up to six OpenRouter models whose live catalogue reports both input and output pricing as zero and whose IDs end in `:free`. Set `OPENROUTER_API_KEY`; optionally pin `OPENROUTER_MODEL` to a currently verified free model. Paid OpenRouter models are never selected by this fallback. FreeLLMAPI routing remains subject to the gateway's own model and billing configuration.
+- **Visuals:** The zero-budget one-minute workflow requires Pexels (`PEXELS_API_KEY`) and will not call Agnes unless `ALLOW_AGNES_POTENTIAL_COST=true` is deliberately enabled. Pexels supplies licensed stock footage; it is not generative AI. The long-form workflow keeps Agnes behind its separate cost acknowledgement.
 - **Narration:** Edge TTS through the cloud optional dependency. Check the provider's current terms, voice usage rights and commercial-use conditions before monetization.
 - **Assembly:** FFmpeg on GitHub-hosted runners.
 - **Agnes:** Optional separate provider. It may incur charges if a promotion has ended; it is disabled unless explicitly selected and separately acknowledged. Do not treat any promotion as a permanent free tier.
@@ -32,7 +32,7 @@ Open **Settings → Secrets and variables → Actions** in this repository. Add 
 
 Required for the long-form zero-budget workflow:
 
-1. `FREELLMAPI_CLOUD_BASE_URL` and `FREELLMAPI_CLOUD_API_KEY`, **or** `OPENROUTER_API_KEY` plus repository variable `OPENROUTER_MODEL` ending in `:free`.
+1. FreeLLMAPI cloud credentials, and optionally `OPENROUTER_API_KEY` as a free-model fallback. OpenRouter can also be the only LLM route; its model catalogue is checked for zero input/output prices at run time. Optionally set repository variable `OPENROUTER_MODEL` to pin a model ending in `:free`.
 2. `PEXELS_API_KEY`.
 
 Optional:
