@@ -13,7 +13,7 @@ def test_longform_workflow_requires_explicit_generation_confirmation():
 def test_longform_workflow_is_free_only_by_default():
     source = WORKFLOW.read_text(encoding="utf-8")
     assert 'ALLOW_PAID_LLM: "false"' in source
-    assert 'LLM_PROVIDER_ORDER: "freellmapi,openrouter"' in source
+    assert 'LLM_PROVIDER_ORDER: freellmapi' in source
     assert 'default: auto' in source
     assert 'Auto/Pexels zero-budget mode requires PEXELS_API_KEY.' in source
     assert 'Agnes potential-cost acknowledgement is required.' in source
