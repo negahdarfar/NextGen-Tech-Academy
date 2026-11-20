@@ -86,11 +86,12 @@ jobs:
           INPUT_ALLOW_AGNES_COST: ${{ inputs.allow_agnes_potential_cost }}
           FREELLMAPI_CLOUD_BASE_URL: ${{ secrets.FREELLMAPI_CLOUD_BASE_URL }}
           FREELLMAPI_CLOUD_API_KEY: ${{ secrets.FREELLMAPI_CLOUD_API_KEY }}
+          FREELLMAPI_MODEL: ${{ vars.FREELLMAPI_MODEL || 'auto' }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
-          if { [ -z "$FREELLMAPI_CLOUD_BASE_URL" ] || [ -z "$FREELLMAPI_CLOUD_API_KEY" ]; } && [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "Configure FreeLLMAPI cloud credentials or OPENROUTER_API_KEY for live-verified free models."
+          if [ -z "$OPENROUTER_API_KEY" ] && [[ "$FREELLMAPI_MODEL" != *:free ]]; then
+            echo "Configure OPENROUTER_API_KEY or set FREELLMAPI_MODEL to an explicitly free model ID ending in :free. Auto/unknown pricing is blocked."
             exit 1
           fi
           if [ "$INPUT_VISUAL_PROVIDER" = "agnes" ]; then
